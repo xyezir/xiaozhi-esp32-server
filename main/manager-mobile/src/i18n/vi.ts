@@ -2,7 +2,7 @@
 export default {
     // TabBar
     'tabBar.home': 'Trang chủ',
-    'tabBar.deviceConfig': 'Cấu hình mạng',
+    'tabBar.deviceConfig': 'Thiết lập',
     'tabBar.settings': 'Hệ thống',
     // Tiêu đề trang cài đặt
     'settings.title': 'Cài đặt',
@@ -334,7 +334,18 @@ export default {
     'agent.tools.eachLineOneItem': 'Nhập một mục mỗi dòng',
 
     // Trang cấu hình thiết bị
-    'deviceConfig.pageTitle': 'Cấu hình thiết bị',
+    'deviceConfig.pageTitle': 'Thiết lập thiết bị',
+    'deviceConfig.provisionTipsTitle': 'Thiết lập Wi-Fi',
+    'deviceConfig.provisionTipsContent': 'Kết nối với điểm phát sóng Xiaozhi-XXXX trong cài đặt Wi-Fi của điện thoại, sau đó mở http://192.168.4.1 trên trình duyệt để cấu hình Wi-Fi.',
+    'deviceConfig.initializationFlowTitle': 'Quy trình thiết lập thống nhất',
+    'deviceConfig.initializationStep1': '1. Thiết bị mới tự động khởi động ở chế độ thiết lập điểm phát sóng.',
+    'deviceConfig.initializationStep2': '2. Kết nối điện thoại với điểm phát sóng của thiết bị và mở http://192.168.4.1 để cấu hình Wi-Fi gia đình.',
+    'deviceConfig.initializationStep3': '3. Sau khi kết nối, thiết bị hiển thị mã liên kết gồm 6 chữ số.',
+    'deviceConfig.initializationStep4': '4. Nhập mã trong Quản lý thiết bị để hoàn tất liên kết.',
+    'deviceConfig.initializationNoteTitle': 'Lưu ý',
+    'deviceConfig.initializationNote': 'Ứng dụng AI không còn cung cấp luồng thiết lập Wi-Fi thứ hai riêng biệt, tránh trùng lặp quy trình.',
+    'deviceConfig.viewSystemProvisioning': 'Xem cách thiết lập Wi-Fi hệ thống',
+    'deviceConfig.goToDeviceBinding': 'Liên kết trong Quản lý thiết bị (mã 6 chữ số)',
     'deviceConfig.wifiConfig': 'Cấu hình WiFi',
     'deviceConfig.ultrasonicConfig': 'Cấu hình siêu âm',
     'deviceConfig.selectConfigMethod': 'Chọn phương pháp cấu hình',

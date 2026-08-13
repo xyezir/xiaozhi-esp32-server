@@ -65,12 +65,15 @@ public class OTAController {
             @Parameter(name = "Device-Id", description = "设备唯一标识", required = true, in = ParameterIn.HEADER) @RequestHeader("Device-Id") String deviceId,
             @Parameter(name = "Client-Id", description = "客户端标识", required = false, in = ParameterIn.HEADER) @RequestHeader(value = "Client-Id", required = false) String clientId) {
         if (StringUtils.isBlank(deviceId)) {
+            log.warn("收到激活请求但Device-Id为空，返回202");
             return ResponseEntity.status(202).build();
         }
         DeviceEntity device = deviceService.getDeviceByMacAddress(deviceId);
         if (device == null) {
+            log.warn("设备还未完成绑定，激活请求返回202");
             return ResponseEntity.status(202).build();
         }
+        log.info("设备已完成绑定，activate 接口返回 success");
         return ResponseEntity.ok("success");
     }
 
@@ -78,18 +81,19 @@ public class OTAController {
     @Hidden
     public ResponseEntity<String> getOTA() {
         String mqttUdpConfig = sysParamsService.getValue(Constant.SERVER_MQTT_GATEWAY, false);
-        if (StringUtils.isBlank(mqttUdpConfig)) {
-            return ResponseEntity.ok("OTA接口不正常，缺少mqtt_gateway地址，请登录智控台，在参数管理找到【server.mqtt_gateway】配置");
-        }
         String wsUrl = sysParamsService.getValue(Constant.SERVER_WEBSOCKET, true);
-        if (StringUtils.isBlank(wsUrl) || wsUrl.equals("null")) {
-            return ResponseEntity.ok("OTA接口不正常，缺少websocket地址，请登录智控台，在参数管理找到【server.websocket】配置");
+        boolean mqttConfigured = StringUtils.isNotBlank(mqttUdpConfig) && !"null".equals(mqttUdpConfig);
+        boolean websocketConfigured = StringUtils.isNotBlank(wsUrl) && !"null".equals(wsUrl);
+        if (!mqttConfigured && !websocketConfigured) {
+            return ResponseEntity.ok("OTA接口不正常，mqtt_gateway和websocket至少需要配置一项");
         }
         String otaUrl = sysParamsService.getValue(Constant.SERVER_OTA, true);
         if (StringUtils.isBlank(otaUrl) || otaUrl.equals("null")) {
             return ResponseEntity.ok("OTA接口不正常，缺少ota地址，请登录智控台，在参数管理找到【server.ota】配置");
         }
-        return ResponseEntity.ok("OTA接口运行正常，websocket集群数量：" + wsUrl.split(";").length);
+        int websocketCount = websocketConfigured ? wsUrl.split(";").length : 0;
+        return ResponseEntity.ok("OTA接口运行正常，websocket集群数量：" + websocketCount
+                + "，mqtt_gateway：" + (mqttConfigured ? "已配置" : "未配置"));
     }
 
     @SneakyThrows

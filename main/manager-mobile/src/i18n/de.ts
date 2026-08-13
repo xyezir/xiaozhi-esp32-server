@@ -2,7 +2,7 @@
 export default {
     // TabBar
     'tabBar.home': 'Startseite',
-    'tabBar.deviceConfig': 'Netzwerkkonfig',
+    'tabBar.deviceConfig': 'Einrichtung',
     'tabBar.settings': 'System',
     // Einstellungsseitentitel
     'settings.title': 'Einstellungen',
@@ -334,7 +334,18 @@ export default {
     'agent.tools.eachLineOneItem': 'Ein Element pro Zeile eingeben',
 
     // Gerätekonfigurationsseite
-    'deviceConfig.pageTitle': 'Gerätekonfiguration',
+    'deviceConfig.pageTitle': 'Geräteeinrichtung',
+    'deviceConfig.provisionTipsTitle': 'WLAN-Einrichtung',
+    'deviceConfig.provisionTipsContent': 'Verbinden Sie sich in den WLAN-Einstellungen des Telefons mit dem Geräte-Hotspot Xiaozhi-XXXX und öffnen Sie dann http://192.168.4.1 im Browser.',
+    'deviceConfig.initializationFlowTitle': 'Einheitlicher Einrichtungsablauf',
+    'deviceConfig.initializationStep1': '1. Ein neues Gerät startet automatisch im Hotspot-Einrichtungsmodus.',
+    'deviceConfig.initializationStep2': '2. Verbinden Sie das Telefon mit dem Geräte-Hotspot und öffnen Sie http://192.168.4.1, um das Heim-WLAN einzurichten.',
+    'deviceConfig.initializationStep3': '3. Nach der Verbindung zeigt das Gerät einen 6-stelligen Bindungscode an.',
+    'deviceConfig.initializationStep4': '4. Geben Sie den Code in der Geräteverwaltung ein, um die Bindung abzuschließen.',
+    'deviceConfig.initializationNoteTitle': 'Hinweis',
+    'deviceConfig.initializationNote': 'Die AI-App bietet keinen separaten zweiten WLAN-Einrichtungsweg mehr, damit die Einrichtung nicht doppelt erfolgt.',
+    'deviceConfig.viewSystemProvisioning': 'System-WLAN-Einrichtung anzeigen',
+    'deviceConfig.goToDeviceBinding': 'In der Geräteverwaltung binden (6-stelliger Code)',
     'deviceConfig.wifiConfig': 'WiFi-Konfiguration',
     'deviceConfig.ultrasonicConfig': 'Ultraschall-Konfiguration',
     'deviceConfig.selectConfigMethod': 'Konfigurationsmethode auswählen',

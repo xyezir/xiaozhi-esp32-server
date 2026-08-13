@@ -2,7 +2,7 @@
 export default {
   // TabBar
   'tabBar.home': 'Home',
-  'tabBar.deviceConfig': 'Network Config',
+  'tabBar.deviceConfig': 'Setup',
   'tabBar.settings': 'System',
   // Settings page title
   'settings.title': 'Settings',
@@ -334,7 +334,18 @@ export default {
   'agent.tools.eachLineOneItem': 'Input one item per line',
 
   // Device Config page
-  'deviceConfig.pageTitle': 'Device Configuration',
+  'deviceConfig.pageTitle': 'Device Setup',
+  'deviceConfig.provisionTipsTitle': 'Wi-Fi Setup',
+  'deviceConfig.provisionTipsContent': 'Connect to the Xiaozhi-XXXX device hotspot in your phone Wi-Fi settings, then open http://192.168.4.1 in a browser to configure Wi-Fi.',
+  'deviceConfig.initializationFlowTitle': 'Device setup flow',
+  'deviceConfig.initializationStep1': '1. A new device starts in hotspot setup mode automatically.',
+  'deviceConfig.initializationStep2': '2. Connect your phone to the device hotspot and open http://192.168.4.1 to configure home Wi-Fi.',
+  'deviceConfig.initializationStep3': '3. The device displays a 6-digit binding code after connecting.',
+  'deviceConfig.initializationStep4': '4. Enter the code in Device Management to finish binding.',
+  'deviceConfig.initializationNoteTitle': 'Note',
+  'deviceConfig.initializationNote': 'The AI app no longer offers a separate second Wi-Fi setup flow, avoiding duplicate setup paths.',
+  'deviceConfig.viewSystemProvisioning': 'View system Wi-Fi setup',
+  'deviceConfig.goToDeviceBinding': 'Bind in Device Management (6-digit code)',
   'deviceConfig.wifiConfig': 'WiFi Configuration',
   'deviceConfig.ultrasonicConfig': 'Ultrasonic Configuration',
   'deviceConfig.selectConfigMethod': 'Select Configuration Method',

@@ -13,7 +13,7 @@
 <script lang="ts" setup>
 import type { Agent } from '@/api/agent/types'
 import { ref } from 'vue'
-import { useMessage } from 'wot-design-uni'
+import { useMessage } from 'wot-design-uni/components/wd-message-box'
 import useZPaging from 'z-paging/components/z-paging/js/hooks/useZPaging.js'
 import { createAgent, deleteAgent, getAgentList } from '@/api/agent/agent'
 import { toast } from '@/utils/toast'

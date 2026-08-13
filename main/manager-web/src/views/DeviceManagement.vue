@@ -337,12 +337,16 @@ export default {
         });
       });
     },
-    handleGenertor(row) {
+    openGenerator(row) {
       const pathname = window.location.pathname;
       const basePath = pathname.split('/').slice(0, -1).join('/');
-      const url = `${window.location.origin}${basePath}/generator/?deviceId=${row.device_id}`;
+      const params = new URLSearchParams({ deviceId: row.device_id });
+      const url = `${window.location.origin}${basePath}/generator/?${params.toString()}`;
       sessionStorage.setItem('devicePath', window.location.href);
       window.location.href = url;
+    },
+    handleGenertor(row) {
+      this.openGenerator(row);
     },
     goFirst() {
       this.currentPage = 1;

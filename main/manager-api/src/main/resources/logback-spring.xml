@@ -68,6 +68,8 @@
             <appender-ref ref="ERROR_FILE" />
         </root>
         <logger name="xiaozhi" level="DEBUG" />
+        <!-- DeviceDao parameters include hardware identifiers; never emit them at DEBUG. -->
+        <logger name="xiaozhi.modules.device.dao.DeviceDao" level="INFO" />
         <logger name="org.springframework.web" level="INFO" />
         <logger name="org.springboot.sample" level="INFO" />
     </springProfile>

@@ -1,0 +1,215 @@
+schema_version: 1
+goal_id: esp-project-adversarial-delivery-20260813
+goal: 完成 ESP 主线对抗审查后的安全修复、当前源码构建、非生产部署和实机验收，并对仍需人机参与的门禁保持阻塞
+status: in_progress
+authority:
+  user_mandate: 用户确认共同理解并要求全部按推荐继续执行到验收
+  autonomy_profile: nonprod-auto
+  coordinator_workspace: /home/luban/codebase/aiot
+  writer_workspaces:
+    - /home/luban/codebase/aiot/xiaozhi-esp32-server
+    - /home/luban/codebase/aiot/esp32-nezuko
+    - /home/luban/codebase/aiot/esp-brookesia
+  branches:
+    - xiaozhi-esp32-server:codex/esp-adversarial-acceptance
+    - esp32-nezuko:codex/esp-adversarial-acceptance
+    - esp-brookesia:codex/esp-adversarial-acceptance
+scope:
+  in:
+    - 修复并验证 OTA 信任边界、敏感日志、绑定码原子性和智能体归属校验
+    - 移除管理端无消费者入口并完成移动端六语言初始化说明
+    - 修复 Cute UI 和 Brookesia 计划内可静态验证的问题
+    - 完成服务端、管理端、移动端和两套固件当前路径构建
+    - 受控替换本机非生产服务并执行 live smoke
+    - 回填新旧计划状态、构建哈希、部署证据和剩余风险
+  out:
+    - Brookesia 快捷控制的真实板级回调
+    - Brookesia 实验固件烧录和九项物理验收
+    - 生产环境发布、数据删除、强推和历史改写
+required_environments:
+  - local
+  - local-nonprod
+  - physical-device
+stop_conditions:
+  - 发现无法归属的工作树改动或活动写入冲突
+  - 需要生产写入、不可逆数据动作、密钥输出或历史改写
+  - 同一阻塞连续三个执行周期没有新证据
+criteria:
+  - id: AC-01
+    outcome: 恶意 Host 和 Forwarded 头不影响 OTA 下载地址，可信地址缺失时停止下发更新
+    verifier:
+      type: command
+      command: cd /home/luban/codebase/aiot/xiaozhi-esp32-server/main/xiaozhi-server && docker run --rm --entrypoint python -v "$PWD:/opt/xiaozhi-esp32-server" -w /opt/xiaozhi-esp32-server xiaozhi-server:20260813-secure -m unittest tests.test_ota_handler_security
+    environment: local
+    required: true
+    owner: agent
+    evidence:
+      - Python OTA security unittest 5/5 passed
+      - Manager API security tests 9/9 passed, including trusted OTA URL fail-closed
+      - Live malicious Host and X-Forwarded-Host request returned only the configured .225 origin
+    status: pass
+    last_verified_at: 2026-08-13T14:50:00+08:00
+  - id: AC-02
+    outcome: 绑定码通过 Redis NX 和 600 秒 TTL 原子占位，日志不包含码值
+    verifier:
+      type: command
+      command: cd /home/luban/codebase/aiot/xiaozhi-esp32-server/main/manager-api && mvn -s /home/luban/.m2/settings-esp-project.xml -DskipTests=false -Dtest=DeviceControllerSecurityTest,DeviceServiceSecurityTest test
+    environment: local
+    required: true
+    owner: agent
+    evidence:
+      - DeviceControllerSecurityTest and DeviceServiceSecurityTest 9/9 passed
+      - Redis setIfAbsent reservations use 600-second TTL and logs contain no code values
+      - Activation consume lock uses a unique token and atomic Lua compare-and-delete release
+    status: pass
+    last_verified_at: 2026-08-13T14:50:00+08:00
+  - id: AC-03
+    outcome: 绑定和手工添加均拒绝使用不属于当前用户的智能体
+    verifier:
+      type: command
+      command: cd /home/luban/codebase/aiot/xiaozhi-esp32-server/main/manager-api && mvn -s /home/luban/.m2/settings-esp-project.xml -DskipTests=false -Dtest=DeviceServiceSecurityTest test
+    environment: local
+    required: true
+    owner: agent
+    evidence:
+      - Ownership rejection and allowed-owner tests passed for bind and manual add
+    status: pass
+    last_verified_at: 2026-08-13T14:50:00+08:00
+  - id: AC-04
+    outcome: Cute UI 状态显式驱动且非中文语言不显示 Cute 中文状态文案
+    verifier:
+      type: command
+      command: cd /home/luban/codebase/aiot/esp32-nezuko && idf.py -B build-current build
+    environment: local
+    required: true
+    owner: agent
+    evidence:
+      - Current Linux build passed; xiaozhi.bin SHA-256 0a2727face3754ab54bbf5c15db23d903dddf3e351eb77730bff32b010e6d0cc
+      - Artifact contains version 2.2.6 and board name esp32-s3-touch-amoled-1.75c
+      - State events drive idle/listening/speaking and STT completion explicitly drives UI thinking; non-zh-CN fallback is built
+    status: pass
+    last_verified_at: 2026-08-13T14:50:00+08:00
+  - id: AC-05
+    outcome: 移动端初始化页六语言键完整且当前源码通过类型检查和构建
+    verifier:
+      type: command
+      command: cd /home/luban/codebase/aiot/xiaozhi-esp32-server/main/manager-mobile && ./node_modules/.bin/vue-tsc --noEmit && CI=1 ./node_modules/.bin/uni build
+    environment: local
+    required: true
+    owner: agent
+    evidence:
+      - vue-tsc completed without errors
+      - CI H5 build passed; index SHA-256 7619afe77a291f074faff0787451b3f9e831bed63a96b9dd84c475f10e56096d
+      - Six locale dictionaries contain the initialization flow keys
+      - Original product identity was restored after independent scope review
+    status: pass
+    last_verified_at: 2026-08-13T14:50:00+08:00
+  - id: AC-06
+    outcome: 管理网页不再暴露无消费者的 cute-v1 快捷入口且当前源码构建通过
+    verifier:
+      type: command
+      command: cd /home/luban/codebase/aiot/xiaozhi-esp32-server/main/manager-web && npm run build
+    environment: local
+    required: true
+    owner: agent
+    evidence:
+      - Manager web production build passed; index SHA-256 a00b7433520740eb425090f8d5c8d1c93a6db0aaca885ec4e67a4418ca1dd02b
+      - No cute-v1 source entry remains
+    status: pass
+    last_verified_at: 2026-08-13T14:50:00+08:00
+  - id: AC-07
+    outcome: Brookesia 标签生命周期、17 图标容量、边界和逆序缩页修复并通过当前 Linux 构建
+    verifier:
+      type: command
+      command: cd /home/luban/codebase/aiot/esp-brookesia/products/phone/phone_amoled_waveshare && idf.py -B build-current build
+    environment: local
+    required: true
+    owner: agent
+    evidence:
+      - Current Linux build passed; esp-brookesia.bin SHA-256 ab6dcc01dc990f435db5825b60bdccbdd08b0b9bb34a85a02e0f4be26c8cc48d
+      - Built implementation uses 17-icon capacity, managed label lifetime, bounded page changes, and reverse page destruction
+    status: pass
+    last_verified_at: 2026-08-13T14:50:00+08:00
+  - id: AC-08
+    outcome: 服务端、管理端、移动端和两套固件均从当前 Linux 路径构建且产物元数据不引用旧路径
+    verifier:
+      type: evidence
+    environment: local
+    required: true
+    owner: agent
+    evidence:
+      - Manager API jar SHA-256 846076d3e88311f334fbf8d32c5931c0d473fb9ea73034d552f4974185f6b508
+      - Web and mobile index SHA-256 values recorded in AC-05 and AC-06
+      - Nezuko and Brookesia firmware SHA-256 values recorded in AC-04 and AC-07
+      - Current build metadata scan contains neither /Users/luban nor /home/luban/project
+    status: pass
+    last_verified_at: 2026-08-13T14:50:00+08:00
+  - id: AC-09
+    outcome: 当前源码镜像在本机非生产环境运行，OTA、API、网页和容器健康 smoke 通过
+    verifier:
+      type: command
+      command: cd /home/luban/codebase/aiot/xiaozhi-esp32-server/main/xiaozhi-server && docker compose -f docker-compose_all.yml ps
+    environment: local-nonprod
+    required: true
+    owner: agent
+    evidence:
+      - Python image sha256:56eefeea49180a7804cbaaa2ac894aa40aa0782800b48408561ad2684eca99cf is running
+      - Web/API image sha256:c128218fdd07e3750b30442d84deb0d7daaa24b999e640f29040a8058a8d4543 is running
+      - HTTP 8002 home, docs, OTA and HTTP 8003 vision returned 200; TCP 8000 opened
+      - MySQL and Redis are healthy; WebSocket-only transport health is normal and live OTA 2.2.6 download matched firmware SHA-256
+      - Base compose uses portable pullable defaults and a separate local override pins current security images
+    status: pass
+    last_verified_at: 2026-08-13T14:50:00+08:00
+  - id: HW-01
+    outcome: ESP32-S3 USB、串口权限和芯片可只读识别
+    verifier:
+      type: device
+    environment: physical-device
+    required: true
+    owner: human
+    evidence:
+      - Espressif 303a:1001 and stable by-id path are present
+      - ESP32-S3 revision v0.2, 8MB PSRAM and 32MB flash identified; serial permission passed
+      - Secure Boot and Flash Encryption are disabled
+      - Device disconnected after the 2.2.5 flash; this does not invalidate the completed identification gate
+    status: pass
+    last_verified_at: 2026-08-13T14:50:00+08:00
+  - id: HW-02
+    outcome: 主固件完成配网、绑定、OTA、连接和 idle 状态实机验收
+    verifier:
+      type: device
+    environment: physical-device
+    required: true
+    owner: human
+    evidence:
+      - Full 32MB pre-flash backup SHA-256 bcfcdc0f758aff8bdee7e13cf521fd0a7f4c9bc4b4fde3fc3df1c89cd3773b5b
+      - Version 2.2.5 firmware and assets flashed with per-segment hash verification and reached Wi-Fi, OTA latest, activation complete and idle
+      - Terminal review produced 2.2.6 and published it to local OTA, but the device disappeared from USB before installation
+      - Current 2.2.6 boot/network/bind/OTA/idle evidence is therefore absent
+    status: blocked
+    last_verified_at: 2026-08-13T14:50:00+08:00
+  - id: HW-03
+    outcome: 主固件完成一次 listening 到 speaking 再回到 idle 的语音回合
+    verifier:
+      type: device
+    environment: physical-device
+    required: true
+    owner: human
+    evidence:
+      - Device is idle and ready, but no human wake phrase and spoken query were available during unattended validation
+    status: blocked
+    last_verified_at: 2026-08-13T14:50:00+08:00
+  - id: HW-04
+    outcome: Cute UI 六项观察在实机上全部通过
+    verifier:
+      type: device
+    environment: physical-device
+    required: true
+    owner: human
+    evidence:
+      - Firmware, assets and state transitions booted; six visual observations still require a person at the display
+    status: blocked
+    last_verified_at: 2026-08-13T14:50:00+08:00
+completion:
+  required_status: pass
+  allow_not_applicable: true

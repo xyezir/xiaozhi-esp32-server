@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import cn.hutool.core.util.RandomUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -30,27 +31,28 @@ import xiaozhi.modules.device.dto.DeviceUpdateDTO;
 import xiaozhi.modules.device.entity.DeviceEntity;
 import xiaozhi.modules.device.service.DeviceService;
 import xiaozhi.modules.security.user.SecurityUser;
-import xiaozhi.modules.sys.service.SysParamsService;
 
 @Tag(name = "设备管理")
 @RestController
 @RequestMapping("/device")
 public class DeviceController {
+    private static final long DEVICE_CODE_EXPIRE_SECONDS = 10 * 60L;
+    private static final int DEVICE_CODE_ATTEMPTS = 20;
+
     private final DeviceService deviceService;
     private final RedisUtils redisUtils;
-    private final SysParamsService sysParamsService;
 
-    public DeviceController(DeviceService deviceService, RedisUtils redisUtils, SysParamsService sysParamsService) {
+    public DeviceController(DeviceService deviceService, RedisUtils redisUtils) {
         this.deviceService = deviceService;
         this.redisUtils = redisUtils;
-        this.sysParamsService = sysParamsService;
     }
 
     @PostMapping("/bind/{agentId}/{deviceCode}")
     @Operation(summary = "绑定设备")
     @RequiresPermissions("sys:role:normal")
     public Result<Void> bindDevice(@PathVariable String agentId, @PathVariable String deviceCode) {
-        deviceService.deviceActivation(agentId, deviceCode);
+        UserDetail user = SecurityUser.getUser();
+        deviceService.deviceActivation(user.getId(), agentId, deviceCode);
         return new Result<>();
     }
 
@@ -61,18 +63,14 @@ public class DeviceController {
         if (StringUtils.isBlank(macAddress)) {
             return new Result<String>().error(ErrorCode.MCA_NOT_NULL);
         }
-        // 生成六位验证码
-        String code;
-        String key;
-        String existsMac = null;
-        do {
-            code = String.valueOf(Math.random()).substring(2, 8);
-            key = RedisKeys.getDeviceCaptchaKey(code);
-            existsMac = (String) redisUtils.get(key);
-        } while (StringUtils.isNotBlank(existsMac));
-
-        redisUtils.set(key, macAddress);
-        return new Result<String>().ok(code);
+        for (int attempt = 0; attempt < DEVICE_CODE_ATTEMPTS; attempt++) {
+            String code = RandomUtil.randomNumbers(6);
+            String key = RedisKeys.getDeviceCaptchaKey(code);
+            if (redisUtils.setIfAbsent(key, macAddress, DEVICE_CODE_EXPIRE_SECONDS)) {
+                return new Result<String>().ok(code);
+            }
+        }
+        return new Result<String>().error(ErrorCode.REDIS_ERROR);
     }
 
     @GetMapping("/bind/{agentId}")

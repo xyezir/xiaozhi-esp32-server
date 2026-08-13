@@ -74,6 +74,31 @@ public class RedisUtils {
         set(key, value, DEFAULT_EXPIRE);
     }
 
+    public boolean setIfAbsent(String key, Object value, long expire) {
+        Boolean created = redisTemplate.opsForValue().setIfAbsent(key, value, expire, TimeUnit.SECONDS);
+        return Boolean.TRUE.equals(created);
+    }
+
+    /**
+     * Delete a lock only when it is still owned by the caller.
+     *
+     * The comparison and deletion must be one Redis operation. A separate GET
+     * followed by DELETE could remove a lock acquired by another request after
+     * the original lock expires.
+     */
+    public boolean compareAndDelete(String key, Object expectedValue) {
+        String luaScript = "if redis.call('get', KEYS[1]) == ARGV[1] "
+                + "then return redis.call('del', KEYS[1]) else return 0 end";
+        DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>();
+        redisScript.setScriptText(luaScript);
+        redisScript.setResultType(Long.class);
+        Long deleted = redisTemplate.execute(
+                redisScript,
+                Collections.singletonList(key),
+                expectedValue);
+        return Long.valueOf(1L).equals(deleted);
+    }
+
     public Object get(String key, long expire) {
         Object value = redisTemplate.opsForValue().get(key);
         if (expire != NOT_EXPIRE) {

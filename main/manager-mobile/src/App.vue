@@ -40,13 +40,13 @@ function updateTabBarText() {
       }
     })
     
-    // 设置配网tabBar文本
+    // 设置初始化tabBar文本
     uni.setTabBarItem({
       index: 1,
       text: t('tabBar.deviceConfig'),
       success: () => {},
       fail: (err) => {
-        console.log('设置配网tabBar文本失败:', err)
+        console.log('设置初始化tabBar文本失败:', err)
       }
     })
     

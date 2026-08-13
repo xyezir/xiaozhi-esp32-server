@@ -2,7 +2,7 @@
 export default {
   // TabBar
   'tabBar.home': 'Início',
-  'tabBar.deviceConfig': 'Config. de Rede',
+  'tabBar.deviceConfig': 'Configuração',
   'tabBar.settings': 'Sistema',
   // Settings page title
   'settings.title': 'Configurações',
@@ -334,7 +334,18 @@ export default {
   'agent.tools.eachLineOneItem': 'Insira um item por linha',
 
   // Device Config page
-  'deviceConfig.pageTitle': 'Configuração do Dispositivo',
+  'deviceConfig.pageTitle': 'Configuração Inicial',
+  'deviceConfig.provisionTipsTitle': 'Configuração de Wi-Fi',
+  'deviceConfig.provisionTipsContent': 'Conecte-se ao hotspot Xiaozhi-XXXX nas configurações de Wi-Fi do celular e abra http://192.168.4.1 no navegador para configurar o Wi-Fi.',
+  'deviceConfig.initializationFlowTitle': 'Fluxo unificado de configuração',
+  'deviceConfig.initializationStep1': '1. Um dispositivo novo inicia automaticamente no modo de configuração por hotspot.',
+  'deviceConfig.initializationStep2': '2. Conecte o celular ao hotspot do dispositivo e abra http://192.168.4.1 para configurar o Wi-Fi residencial.',
+  'deviceConfig.initializationStep3': '3. Após conectar, o dispositivo exibe um código de vinculação de 6 dígitos.',
+  'deviceConfig.initializationStep4': '4. Digite o código no Gerenciamento de Dispositivos para concluir a vinculação.',
+  'deviceConfig.initializationNoteTitle': 'Observação',
+  'deviceConfig.initializationNote': 'O app de IA não oferece mais um segundo fluxo separado de Wi-Fi, evitando caminhos de configuração duplicados.',
+  'deviceConfig.viewSystemProvisioning': 'Ver configuração de Wi-Fi do sistema',
+  'deviceConfig.goToDeviceBinding': 'Vincular no Gerenciamento de Dispositivos (código de 6 dígitos)',
   'deviceConfig.wifiConfig': 'Configuração WiFi',
   'deviceConfig.ultrasonicConfig': 'Configuração Ultrassônica',
   'deviceConfig.selectConfigMethod': 'Selecionar Método de Configuração',

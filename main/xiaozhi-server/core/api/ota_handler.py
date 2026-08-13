@@ -3,14 +3,16 @@ import time
 import base64
 import hashlib
 import hmac
+import ipaddress
 import os
 import re
 import glob
 from typing import Dict, List, Tuple
+from urllib.parse import urlsplit
 from aiohttp import web
 
 from core.auth import AuthManager
-from core.utils.util import get_local_ip, get_vision_url
+from core.utils.util import get_local_ip
 from core.api.base_handler import BaseHandler
 
 TAG = __name__
@@ -41,6 +43,64 @@ def _is_higher_version(a: str, b: str) -> bool:
         if ai < bi:
             return False
     return False
+
+
+def _validated_origin(value: str, required_path: str = "") -> str:
+    """Return a trusted HTTP(S) origin for a strictly shaped configured URL."""
+    if not isinstance(value, str) or not value.strip():
+        return ""
+    candidate = value.strip()
+    if any(ord(character) <= 0x20 or ord(character) == 0x7F for character in candidate):
+        return ""
+    try:
+        parsed = urlsplit(candidate)
+        if parsed.scheme not in ("http", "https"):
+            return ""
+        if not parsed.hostname or parsed.username or parsed.password:
+            return ""
+        if "%" in parsed.netloc:
+            return ""
+        port = parsed.port
+        if port == 0:
+            return ""
+        hostname = parsed.hostname
+        if ":" in hostname:
+            ipaddress.IPv6Address(hostname)
+        elif re.fullmatch(r"[0-9.]+", hostname):
+            ipaddress.IPv4Address(hostname)
+        else:
+            domain = hostname.rstrip(".")
+            labels = domain.split(".")
+            if (
+                not domain
+                or len(domain) > 253
+                or any(
+                    not re.fullmatch(r"[A-Za-z0-9-]{1,63}", label)
+                    or label.startswith("-")
+                    or label.endswith("-")
+                    for label in labels
+                )
+            ):
+                return ""
+        if parsed.query or parsed.fragment:
+            return ""
+        if required_path:
+            if parsed.path != required_path:
+                return ""
+        elif parsed.path not in ("", "/"):
+            return ""
+        return f"{parsed.scheme}://{parsed.netloc}"
+    except (TypeError, ValueError):
+        return ""
+
+
+def _get_trusted_ota_origin(server_config: dict) -> str:
+    origin = _validated_origin(server_config.get("ota_public_url", ""))
+    if origin:
+        return origin
+    return _validated_origin(
+        server_config.get("vision_explain", ""), "/mcp/vision/explain"
+    )
 
 
 class OTAHandler(BaseHandler):
@@ -152,18 +212,16 @@ class OTAHandler(BaseHandler):
         try:
             data = await request.text()
             self.logger.bind(tag=TAG).debug(f"OTA请求方法: {request.method}")
-            self.logger.bind(tag=TAG).debug(f"OTA请求头: {request.headers}")
-            self.logger.bind(tag=TAG).debug(f"OTA请求数据: {data}")
 
             device_id = request.headers.get("device-id", "")
             if device_id:
-                self.logger.bind(tag=TAG).info(f"OTA请求设备ID: {device_id}")
+                self.logger.bind(tag=TAG).info("收到带设备标识的OTA请求")
             else:
                 raise Exception("OTA请求设备ID为空")
 
             client_id = request.headers.get("client-id", "")
             if client_id:
-                self.logger.bind(tag=TAG).info(f"OTA请求ClientID: {client_id}")
+                self.logger.bind(tag=TAG).info("OTA请求包含Client-ID")
             else:
                 raise Exception("OTA请求ClientID为空")
 
@@ -178,7 +236,6 @@ class OTAHandler(BaseHandler):
             # - websocket_port is used to construct websocket URL (server["port"])
             # - http_port is used to construct OTA download URLs (server["http_port"])
             websocket_port = int(server_config.get("port", 8000))
-            http_port = int(server_config.get("http_port", 8003))
             local_ip = get_local_ip()
 
             # Determine device model (prefer headers)
@@ -277,7 +334,7 @@ class OTAHandler(BaseHandler):
                     "publish_topic": "device-server",
                     "subscribe_topic": f"devices/p2p/{mac_address_safe}",
                 }
-                self.logger.bind(tag=TAG).info(f"为设备 {device_id} 下发MQTT网关配置")
+                self.logger.bind(tag=TAG).info("已下发MQTT网关配置")
 
             else:  # 未配置 mqtt_gateway，下发 WebSocket
                 # 如果开启了认证，则进行认证校验
@@ -293,9 +350,7 @@ class OTAHandler(BaseHandler):
                     "url": self._get_websocket_url(local_ip, websocket_port),
                     "token": token,
                 }
-                self.logger.bind(tag=TAG).info(
-                    f"未配置MQTT网关，为设备 {device_id} 下发WebSocket配置"
-                )
+                self.logger.bind(tag=TAG).info("未配置MQTT网关，已下发WebSocket配置")
 
             # Now check firmware files for updates
             try:
@@ -309,30 +364,31 @@ class OTAHandler(BaseHandler):
 
                 chosen_url = ""
                 chosen_version = device_version
+                trusted_origin = _get_trusted_ota_origin(server_config)
 
                 # candidates are sorted descending by version
                 for ver, fname in candidates:
                     if _is_higher_version(ver, device_version):
-                        # build download url (only allow download via our download endpoint)
-                        chosen_version = ver
-                        # Use get_vision_url to get the base URL and replace the path
-                        vision_url = get_vision_url(self.config)
-                        # Replace the path from "/mcp/vision/explain" to "/xiaozhi/ota/download/{fname}"
-                        chosen_url = vision_url.replace(
-                            "/mcp/vision/explain", f"/xiaozhi/ota/download/{fname}"
-                        )
+                        if trusted_origin:
+                            chosen_version = ver
+                            chosen_url = (
+                                f"{trusted_origin}/xiaozhi/ota/download/"
+                                f"{_safe_basename(fname)}"
+                            )
+                        else:
+                            self.logger.bind(tag=TAG).error(
+                                "OTA公开地址配置缺失或无效，已停止下发固件更新"
+                            )
                         break
 
                 if chosen_url:
                     return_json["firmware"]["version"] = chosen_version
                     return_json["firmware"]["url"] = chosen_url
                     self.logger.bind(tag=TAG).info(
-                        f"为设备 {device_id} 下发固件 {chosen_version} [如果地址前缀有误，请检查配置文件中的server.vision_explain]-> {chosen_url} "
+                        f"已下发固件版本 {chosen_version}"
                     )
                 else:
-                    self.logger.bind(tag=TAG).info(
-                        f"设备 {device_id} 固件已是最新: {device_version}"
-                    )
+                    self.logger.bind(tag=TAG).info("未下发固件更新")
 
             except Exception as e:
                 self.logger.bind(tag=TAG).error(f"检查固件版本时出错: {e}")

@@ -12,7 +12,7 @@ import type { Language } from '@/store/lang'
 import { clearServerBaseUrlOverride, getEnvBaseUrl, getServerBaseUrlOverride, setServerBaseUrlOverride } from '@/utils'
 import { isMp } from '@/utils/platform'
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useToast } from 'wot-design-uni'
+import { useToast } from 'wot-design-uni/components/wd-toast'
 
 defineOptions({
   name: 'SettingsPage',

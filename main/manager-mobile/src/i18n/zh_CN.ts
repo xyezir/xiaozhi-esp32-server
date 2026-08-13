@@ -2,7 +2,7 @@
 export default {
   // TabBar
   'tabBar.home': '首页',
-  'tabBar.deviceConfig': '配网',
+  'tabBar.deviceConfig': '初始化',
   'tabBar.settings': '系统',
   // 设置页面标题
   'settings.title': '设置',
@@ -334,7 +334,18 @@ export default {
   'agent.tools.eachLineOneItem': '每行输入一个项目',
 
   // 设备配置页面
-  'deviceConfig.pageTitle': '设备配置',
+  'deviceConfig.pageTitle': '设备初始化',
+  'deviceConfig.provisionTipsTitle': '配网提示',
+  'deviceConfig.provisionTipsContent': '请在手机系统Wi-Fi中连接设备热点 Xiaozhi-XXXX，然后打开浏览器访问 http://192.168.4.1 完成Wi-Fi配网。',
+  'deviceConfig.initializationFlowTitle': '统一初始化流程',
+  'deviceConfig.initializationStep1': '1. 新设备首次开机会自动进入热点配网模式。',
+  'deviceConfig.initializationStep2': '2. 手机连接设备热点，访问 http://192.168.4.1 配置家庭Wi-Fi。',
+  'deviceConfig.initializationStep3': '3. 设备联网后会显示 6 位绑定码。',
+  'deviceConfig.initializationStep4': '4. 在设备管理中输入绑定码完成绑定。',
+  'deviceConfig.initializationNoteTitle': '说明',
+  'deviceConfig.initializationNote': 'AI 侧不再提供独立Wi-Fi二次配置入口，避免与系统配网重复。',
+  'deviceConfig.viewSystemProvisioning': '查看系统配网方式',
+  'deviceConfig.goToDeviceBinding': '去设备管理绑定（6位码）',
   'deviceConfig.wifiConfig': 'WiFi配网',
   'deviceConfig.ultrasonicConfig': '超声波配网',
   'deviceConfig.selectConfigMethod': '选择配网方式',

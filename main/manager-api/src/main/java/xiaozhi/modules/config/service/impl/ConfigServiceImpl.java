@@ -33,6 +33,7 @@ import xiaozhi.modules.agent.service.AgentTemplateService;
 import xiaozhi.modules.agent.vo.AgentVoicePrintVO;
 import xiaozhi.modules.config.service.ConfigService;
 import xiaozhi.modules.device.entity.DeviceEntity;
+import xiaozhi.modules.device.dto.DeviceReportRespDTO;
 import xiaozhi.modules.device.service.DeviceService;
 import xiaozhi.modules.model.entity.ModelConfigEntity;
 import xiaozhi.modules.model.service.ModelConfigService;
@@ -118,10 +119,10 @@ public class ConfigServiceImpl implements ConfigService {
         // 根据MAC地址查找设备
         DeviceEntity device = deviceService.getDeviceByMacAddress(macAddress);
         if (device == null) {
-            // 如果设备，去redis里看看有没有需要连接的设备
-            String cachedCode = deviceService.geCodeByDeviceId(macAddress);
-            if (StringUtils.isNotBlank(cachedCode)) {
-                throw new RenException(ErrorCode.OTA_DEVICE_NEED_BIND, cachedCode);
+            // 如果设备不存在，则返回统一绑定态：返回可复用/新生成绑定码（返回10042给前端）
+            DeviceReportRespDTO.Activation activation = deviceService.buildActivation(macAddress, null);
+            if (StringUtils.isNotBlank(activation.getCode())) {
+                throw new RenException(ErrorCode.OTA_DEVICE_NEED_BIND, activation.getCode());
             }
             throw new RenException(ErrorCode.OTA_DEVICE_NOT_FOUND);
         }

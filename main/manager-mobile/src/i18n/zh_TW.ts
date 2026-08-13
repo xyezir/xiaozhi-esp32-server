@@ -2,7 +2,7 @@
 export default {
   // TabBar
   'tabBar.home': '首頁',
-  'tabBar.deviceConfig': '配網',
+  'tabBar.deviceConfig': '初始化',
   'tabBar.settings': '系統',
   // 設置頁面標題
   'settings.title': '設置',
@@ -334,7 +334,18 @@ export default {
   'agent.tools.eachLineOneItem': '每行輸入一個項目',
 
   // 設備配置頁面
-  'deviceConfig.pageTitle': '設備配置',
+  'deviceConfig.pageTitle': '設備初始化',
+  'deviceConfig.provisionTipsTitle': '配網提示',
+  'deviceConfig.provisionTipsContent': '請在手機系統 Wi-Fi 中連接裝置熱點 Xiaozhi-XXXX，然後開啟瀏覽器前往 http://192.168.4.1 完成 Wi-Fi 配網。',
+  'deviceConfig.initializationFlowTitle': '統一初始化流程',
+  'deviceConfig.initializationStep1': '1. 新裝置首次開機會自動進入熱點配網模式。',
+  'deviceConfig.initializationStep2': '2. 手機連接裝置熱點，前往 http://192.168.4.1 設定家庭 Wi-Fi。',
+  'deviceConfig.initializationStep3': '3. 裝置連網後會顯示 6 位綁定碼。',
+  'deviceConfig.initializationStep4': '4. 在裝置管理中輸入綁定碼完成綁定。',
+  'deviceConfig.initializationNoteTitle': '說明',
+  'deviceConfig.initializationNote': 'AI 端不再提供獨立的 Wi-Fi 二次設定入口，避免與系統配網重複。',
+  'deviceConfig.viewSystemProvisioning': '查看系統配網方式',
+  'deviceConfig.goToDeviceBinding': '前往裝置管理綁定（6 位碼）',
   'deviceConfig.wifiConfig': 'WiFi配網',
   'deviceConfig.ultrasonicConfig': '超聲波配網',
   'deviceConfig.selectConfigMethod': '選擇配網方式',

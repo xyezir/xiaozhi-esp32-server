@@ -1,0 +1,7 @@
+# Local non-production image pins for the 2026-08-13 security baseline.
+# Use together with docker-compose_all.yml; the base file remains portable.
+services:
+  xiaozhi-esp32-server:
+    image: xiaozhi-server:20260813-secure
+  xiaozhi-esp32-server-web:
+    image: xiaozhi-web:20260813-secure

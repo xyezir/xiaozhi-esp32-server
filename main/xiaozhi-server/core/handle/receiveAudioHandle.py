@@ -142,7 +142,7 @@ async def check_bind_device(conn: "ConnectionHandler"):
     if conn.bind_code:
         # 确保bind_code是6位数字
         if len(conn.bind_code) != 6:
-            conn.logger.bind(tag=TAG).error(f"无效的绑定码格式: {conn.bind_code}")
+            conn.logger.bind(tag=TAG).error("无效的绑定码格式")
             text = "绑定码格式错误，请检查配置。"
             await send_stt_message(conn, text)
             return

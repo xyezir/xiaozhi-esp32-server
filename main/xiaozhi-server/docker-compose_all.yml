@@ -1,10 +1,10 @@
 # Docker安装全模块
 
-version: '3'
 services:
   # Server模块
   xiaozhi-esp32-server:
-    image: ghcr.nju.edu.cn/xinnan-tech/xiaozhi-esp32-server:server_latest
+    # Override with XIAOZHI_SERVER_IMAGE for a locally built or pinned release.
+    image: ${XIAOZHI_SERVER_IMAGE:-ghcr.nju.edu.cn/xinnan-tech/xiaozhi-esp32-server:server_latest}
     container_name: xiaozhi-esp32-server
     depends_on:
       - xiaozhi-esp32-server-db
@@ -29,7 +29,8 @@ services:
 
   # manager-api和manager-web模块
   xiaozhi-esp32-server-web:
-    image: ghcr.nju.edu.cn/xinnan-tech/xiaozhi-esp32-server:web_latest
+    # Override with XIAOZHI_WEB_IMAGE for a locally built or pinned release.
+    image: ${XIAOZHI_WEB_IMAGE:-ghcr.nju.edu.cn/xinnan-tech/xiaozhi-esp32-server:web_latest}
     container_name: xiaozhi-esp32-server-web
     restart: always
     networks:
@@ -55,7 +56,7 @@ services:
       - ./uploadfile:/uploadfile
   # 数据库模块
   xiaozhi-esp32-server-db:
-    image: mysql:latest
+    image: mysql:9.6.0
     container_name: xiaozhi-esp32-server-db
     healthcheck:
       test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost" ]
@@ -73,7 +74,6 @@ services:
       - TZ=Asia/Shanghai
       - MYSQL_ROOT_PASSWORD=123456
       - MYSQL_DATABASE=xiaozhi_esp32_server
-      - MYSQL_INITDB_ARGS="--character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci"
   # redis模块
   xiaozhi-esp32-server-redis:
     image: redis:8.0

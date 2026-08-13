@@ -5,3 +5,9 @@ __pycache__
 Dockerfile
 tmp/
 data/
+main/xiaozhi-server/data/
+main/xiaozhi-server/mysql/
+main/xiaozhi-server/uploadfile/
+main/xiaozhi-server/models/SenseVoiceSmall/model.pt
+main/xiaozhi-server/models/sherpa-onnx*
+uploadfile/

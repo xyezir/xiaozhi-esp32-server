@@ -26,6 +26,15 @@ public interface DeviceService extends BaseService<DeviceEntity> {
             DeviceReportReqDTO deviceReport);
 
     /**
+     * 生成或复用设备激活码
+     *
+     * @param deviceId 设备ID
+     * @param deviceReport 设备上报信息（可为 null）
+     * @return 激活码
+     */
+    DeviceReportRespDTO.Activation buildActivation(String deviceId, DeviceReportReqDTO deviceReport);
+
+    /**
      * 获取用户指定智能体的设备列表，
      */
     List<DeviceEntity> getUserDevices(Long userId, String agentId);
@@ -38,7 +47,7 @@ public interface DeviceService extends BaseService<DeviceEntity> {
     /**
      * 设备激活
      */
-    Boolean deviceActivation(String agentId, String activationCode);
+    Boolean deviceActivation(Long userId, String agentId, String activationCode);
 
     /**
      * 删除此用户的所有设备
