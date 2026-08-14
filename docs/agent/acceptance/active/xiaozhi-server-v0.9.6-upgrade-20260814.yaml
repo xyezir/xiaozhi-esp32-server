@@ -60,10 +60,11 @@ criteria:
     required: true
     owner: agent
     evidence:
-      - image xiaozhi-server:0.9.6-candidate-20260814 built as sha256:3665c05953e772881968a114828c2276671448848eb4fb33e8243c9cbf4c07e0
-      - isolated container used network none, no manager URL, no database and no host ports; HTTP, WebSocket and OTA probes passed
+      - image xiaozhi-server:0.9.6-candidate-20260814 built twice as sha256:f8d806645cf7815b8c87720cabcbb4b7ec2fce16c7c44e46788cb248c8771297 from source revision 9f880297fbe6c4b2dcb3ef6af4ba105d7eee6bed and tree 37860ca25124b4945ffd48c6ce3a2a0629422814
+      - generated Python caches are recursively excluded; embedded provenance labels match the committed source, Dockerfile, ignore policy and base image sha256:130bb55b34acabc3d43bf8d1af3d4cf01b53404d04550434992f0b7c486d8a1d
+      - isolated container used network none, no manager URL, no database and no host ports; HTTP, WebSocket, OTA and two provider contract tests passed
     status: pass
-    last_verified_at: 2026-08-14T20:27:00+08:00
+    last_verified_at: 2026-08-15T00:10:00+08:00
   - id: AC-04
     outcome: 升级方案明确现有 manager 兼容性、模型现状、候选镜像摘要、替换步骤、观察项和一条命令回滚
     verifier:
@@ -73,9 +74,9 @@ criteria:
     required: true
     owner: agent
     evidence:
-      - docs/agent/reports/xiaozhi-server-v0.9.6-upgrade-20260814.md records compatibility, model staging, immutable image ID, rollout gates and one-command core rollback
+      - docs/agent/reports/xiaozhi-server-v0.9.6-upgrade-20260814.md records compatibility, model staging, source/base/image provenance, rollout gates and one-command core rollback
     status: pass
-    last_verified_at: 2026-08-14T20:32:00+08:00
+    last_verified_at: 2026-08-15T00:10:00+08:00
 completion:
   required_status: pass
   allow_not_applicable: true

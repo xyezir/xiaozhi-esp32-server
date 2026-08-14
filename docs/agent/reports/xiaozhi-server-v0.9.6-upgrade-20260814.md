@@ -5,7 +5,12 @@
 - The running core container reports `0.9.1` and uses the pinned image `xiaozhi-server:20260813-secure`.
 - Official stable `v0.9.6` is the candidate baseline. The official rolling `main` has additional unreleased commits, so it is not used as the replacement target.
 - The current custom branch is based on an older upstream revision and conflicts with `v0.9.6` in server, manager and dependency files. The candidate therefore starts at the exact stable tag and ports only the locally required security changes.
-- Candidate image: `xiaozhi-server:0.9.6-candidate-20260814` (`sha256:3665c05953e772881968a114828c2276671448848eb4fb33e8243c9cbf4c07e0`).
+- Candidate image: `xiaozhi-server:0.9.6-candidate-20260814`.
+- Candidate image ID: `sha256:f8d806645cf7815b8c87720cabcbb4b7ec2fce16c7c44e46788cb248c8771297`.
+- Candidate source revision: `9f880297fbe6c4b2dcb3ef6af4ba105d7eee6bed`.
+- Candidate source tree: `37860ca25124b4945ffd48c6ce3a2a0629422814`.
+- Candidate base image ID: `sha256:130bb55b34acabc3d43bf8d1af3d4cf01b53404d04550434992f0b7c486d8a1d`.
+- Two consecutive builds produced the same image ID. The build excludes generated Python caches and verifies source, Dockerfile, ignore-policy and base-image provenance labels before smoke testing.
 - The isolated smoke runs with Docker network mode `none`, no manager URL, no database, and no published host ports. HTTP, WebSocket and OTA probes pass.
 
 ## Compatibility boundary

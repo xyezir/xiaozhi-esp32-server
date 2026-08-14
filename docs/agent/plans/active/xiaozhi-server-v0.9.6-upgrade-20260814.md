@@ -21,6 +21,7 @@ Build an auditable, rollback-ready v0.9.6 core-server candidate without touching
 - The running dialogue path uses non-streaming `qwen3-asr-flash`, `qwen-plus` and `EdgeTTS`; observed failures were upstream-provider timeouts rather than local CPU or memory pressure.
 - The old manager provides the two required core configuration routes. New v0.9.6 correct-word, chat-title and address-book calls are optional and degrade on the old manager, so those features are not part of a core-only rollout.
 - The isolated candidate starts successfully with network disabled and without a manager URL or database; HTTP, WebSocket and OTA probes pass.
+- The first recorded image ID was not reproducible because nested ignored Python caches still entered the Docker context. Recursive exclusions and embedded source/base provenance now make consecutive builds identical; the superseded image was never deployed.
 
 ## Decision log
 
@@ -30,4 +31,4 @@ Build an auditable, rollback-ready v0.9.6 core-server candidate without touching
 
 ## Outcomes and retrospective
 
-The rollback-ready stable candidate is built as `sha256:3665c05953e772881968a114828c2276671448848eb4fb33e8243c9cbf4c07e0`. Security regressions and isolated protocol smoke pass. The current running service remains unchanged; a controlled one-device test-environment deployment is still required before production replacement.
+The rollback-ready stable candidate is built reproducibly as `sha256:f8d806645cf7815b8c87720cabcbb4b7ec2fce16c7c44e46788cb248c8771297` from source revision `9f880297fbe6c4b2dcb3ef6af4ba105d7eee6bed` and source tree `37860ca25124b4945ffd48c6ce3a2a0629422814`. Security regressions, isolated protocol smoke and provider configuration contracts pass. The current running service remains unchanged; a controlled one-device test-environment deployment is still required before production replacement.
