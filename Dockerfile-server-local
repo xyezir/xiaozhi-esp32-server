@@ -1,0 +1,6 @@
+ARG SERVER_BASE_IMAGE=xiaozhi-server:server-base-local
+FROM ${SERVER_BASE_IMAGE}
+
+COPY main/xiaozhi-server .
+
+CMD ["python", "app.py"]

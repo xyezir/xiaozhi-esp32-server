@@ -1,0 +1,81 @@
+schema_version: 1
+goal_id: xiaozhi-server-v0.9.6-upgrade-20260814
+goal: 形成可回滚、保留本地安全修复的 xiaozhi-server v0.9.6 升级候选并证明其可安全替换当前 0.9.1 核心服务
+status: passed
+authority:
+  user_mandate: 检查后端是否为最新版，评估并按推荐升级，同时持续推进到验收
+  autonomy_profile: nonprod-auto
+  coordinator_workspace: /home/luban/codebase/aiot/esp32-nezuko
+  writer_workspaces:
+    - /home/luban/codebase/aiot/.worktrees/xiaozhi-server-v0.9.6-eval
+  branches:
+    - codex/xiaozhi-v0.9.6-upgrade-eval
+scope:
+  in:
+    - 以官方稳定版 v0.9.6 为升级基线，不跟随滚动 main
+    - 移植当前部署依赖的 OTA 信任边界与敏感日志脱敏
+    - 构建本地候选镜像并在隔离端口完成启动和协议 smoke
+    - 记录与现有 manager、配置、数据卷和回滚镜像的兼容边界
+  out:
+    - 未经额外授权替换当前运行中的服务或修改现有数据库
+    - 在未验证计费和权限前切换付费模型或 TTS 提供商
+    - 将固件定制代码整体迁移到 ESP-IDF 6
+required_environments:
+  - local
+stop_conditions:
+  - 候选需要写入当前数据库或覆盖当前运行容器才能继续验证
+  - 发现无法保留的 OTA 安全边界、密钥泄漏风险或不可回滚迁移
+criteria:
+  - id: AC-01
+    outcome: 候选严格基于官方 v0.9.6，且与滚动 main 的差异和本地安全移植可审计
+    verifier:
+      type: command
+      command: cd /home/luban/codebase/aiot/.worktrees/xiaozhi-server-v0.9.6-eval && test "$(git merge-base HEAD v0.9.6)" = "$(git rev-parse v0.9.6)" && git diff --check
+    environment: local
+    required: true
+    owner: agent
+    evidence:
+      - candidate worktree HEAD descends from the exact official v0.9.6 tag and git diff --check passes
+      - rolling main was reviewed separately and intentionally excluded from this stable candidate
+    status: pass
+    last_verified_at: 2026-08-14T20:35:00+08:00
+  - id: AC-02
+    outcome: OTA 只从可信配置构造下载地址，且设备、绑定码、请求头和令牌不进入日志
+    verifier:
+      type: command
+      command: cd /home/luban/codebase/aiot/.worktrees/xiaozhi-server-v0.9.6-eval && docker run --rm --network none -v "$PWD/main/xiaozhi-server:/opt/xiaozhi-esp32-server" -w /opt/xiaozhi-esp32-server xiaozhi-server:20260813-secure python -m unittest tests.test_ota_handler_security tests.test_sensitive_log_redaction tests.test_network_resource_safety
+    environment: local
+    required: true
+    owner: agent
+    evidence:
+      - 11 unittest cases passed in an existing dependency image with network disabled; includes OTA origin validation, fail-closed behavior, binding-code and sensitive-log redaction, and socket cleanup
+    status: pass
+    last_verified_at: 2026-08-14T20:22:00+08:00
+  - id: AC-03
+    outcome: 本地镜像可构建，并在不连接现有数据库、不占用现有端口的隔离环境启动且通过 HTTP/WebSocket 探测
+    verifier:
+      type: command
+      command: cd /home/luban/codebase/aiot/.worktrees/xiaozhi-server-v0.9.6-eval && bash scripts/verify-server-upgrade-candidate.sh
+    environment: local
+    required: true
+    owner: agent
+    evidence:
+      - image xiaozhi-server:0.9.6-candidate-20260814 built as sha256:3665c05953e772881968a114828c2276671448848eb4fb33e8243c9cbf4c07e0
+      - isolated container used network none, no manager URL, no database and no host ports; HTTP, WebSocket and OTA probes passed
+    status: pass
+    last_verified_at: 2026-08-14T20:27:00+08:00
+  - id: AC-04
+    outcome: 升级方案明确现有 manager 兼容性、模型现状、候选镜像摘要、替换步骤、观察项和一条命令回滚
+    verifier:
+      type: command
+      command: cd /home/luban/codebase/aiot/.worktrees/xiaozhi-server-v0.9.6-eval && python3 scripts/verify-upgrade-report.py docs/agent/reports/xiaozhi-server-v0.9.6-upgrade-20260814.md
+    environment: local
+    required: true
+    owner: agent
+    evidence:
+      - docs/agent/reports/xiaozhi-server-v0.9.6-upgrade-20260814.md records compatibility, model staging, immutable image ID, rollout gates and one-command core rollback
+    status: pass
+    last_verified_at: 2026-08-14T20:32:00+08:00
+completion:
+  required_status: pass
+  allow_not_applicable: true
