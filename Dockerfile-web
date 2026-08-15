@@ -2,7 +2,7 @@
 FROM node:18 AS web-builder
 WORKDIR /app
 COPY main/manager-web/package*.json ./
-RUN npm install
+RUN npm ci
 COPY main/manager-web .
 RUN npm run build
 
@@ -11,7 +11,7 @@ FROM maven:3.9.4-eclipse-temurin-21 AS api-builder
 WORKDIR /app
 COPY main/manager-api/pom.xml .
 COPY main/manager-api/src ./src
-RUN mvn clean package -Dmaven.test.skip=true
+RUN mvn -B -ntp clean package -DskipTests
 
 # 第三阶段：构建最终镜像
 FROM bellsoft/liberica-runtime-container:jre-21-glibc

@@ -1,7 +1,7 @@
 schema_version: 1
 goal_id: xiaozhi-server-v0.9.6-upgrade-20260814
 goal: 将已验收的 xiaozhi-server v0.9.6 安全候选升级到官方最新 main，补齐新版模型与火山语音 API Key 兼容，并发布到 xyezir fork
-status: passed
+status: in_progress
 authority:
   user_mandate: 检查后端是否为最新版，持续推进到验收；2026-08-15 明确要求将 xyezir/xiaozhi-esp32-server 直接升级到官方最新版、同步官方模型配置并发布
   autonomy_profile: nonprod-auto
@@ -17,6 +17,7 @@ scope:
     - 同步官方模型供应器、模型名称和默认配置，并为火山双流 TTS 同时支持新版 API Key 与旧版 AppID/Access Token
     - 构建本地候选镜像并在隔离环境完成启动和协议 smoke
     - 推送任务分支到 xyezir/xiaozhi-esp32-server 并创建可审查的发布 PR
+    - 构建新版 manager web/API 镜像，并在无宿主端口、一次性数据库和 Redis 中完成全栈 shadow 部署与 core-to-manager 配置拉取 smoke
   out:
     - 替换当前运行中的生产服务或修改现有生产数据库
     - 在未验证计费和权限前调用付费模型或 TTS 提供商
@@ -91,6 +92,17 @@ criteria:
       - the fork defines no required GitHub status checks for this pull request; local verification evidence is recorded in the report and PR body
     status: pass
     last_verified_at: 2026-08-15T19:42:00+08:00
+  - id: AC-05
+    outcome: 合并后的 manager web/API 与 core 候选可在不连接生产数据、不发布宿主端口的 shadow 环境共同启动，数据库迁移和 core-to-manager 配置拉取通过
+    verifier:
+      type: command
+      command: cd /home/luban/codebase/aiot/.worktrees/xiaozhi-server-v0.9.6-eval && bash scripts/verify-fullstack-shadow.sh
+    environment: local
+    required: true
+    owner: agent
+    evidence: []
+    status: pending
+    last_verified_at: null
 completion:
   required_status: pass
   allow_not_applicable: true

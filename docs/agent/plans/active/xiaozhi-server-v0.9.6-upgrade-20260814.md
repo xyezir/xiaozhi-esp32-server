@@ -23,6 +23,7 @@ Upgrade the accepted v0.9.6 core-server candidate to the official rolling `main`
 - [x] Add explicit current-console `X-Api-Key` support to the Huoshan double-stream provider while keeping legacy AppID/Access Token compatibility.
 - [x] Synchronize and document official model/provider defaults; complete focused, manager and image-level verification.
 - [x] Publish the branch and reviewable PR to the fork, record GitHub evidence and close the acceptance contract.
+- [ ] Build and deploy a disposable full-stack shadow with no host ports; verify manager migration, Web/API routes and core-to-manager authenticated configuration fetch, then remove all shadow containers and network.
 
 ## Surprises and discoveries
 

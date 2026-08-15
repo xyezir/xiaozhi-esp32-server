@@ -17,3 +17,13 @@ tmp/
 **/tmp/
 data/
 **/data/
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+target/
+**/target/
+.webpack_cache/
+**/.webpack_cache/
+unpackage/
+**/unpackage/
