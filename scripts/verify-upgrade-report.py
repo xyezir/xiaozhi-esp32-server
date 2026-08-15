@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 
-IMAGE = "xiaozhi-server:0.9.6-candidate-20260814"
+IMAGE = "xiaozhi-server:0.9.6-main-20260815-candidate"
 BASE_IMAGE = "xiaozhi-server:server-base-local"
 
 
@@ -32,7 +32,7 @@ def main() -> int:
         "## Rollout",
         "## Observation gates",
         "## Rollback",
-        "xiaozhi-server:0.9.6-candidate-20260814",
+        "xiaozhi-server:0.9.6-main-20260815-candidate",
         "xiaozhi-server:20260813-secure",
         "manager web/API",
         "0.9.1",
