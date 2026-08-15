@@ -6,9 +6,9 @@
 - Official stable `v0.9.6` is the candidate baseline. The official rolling `main` has additional unreleased commits, so it is not used as the replacement target.
 - The current custom branch is based on an older upstream revision and conflicts with `v0.9.6` in server, manager and dependency files. The candidate therefore starts at the exact stable tag and ports only the locally required security changes.
 - Candidate image: `xiaozhi-server:0.9.6-candidate-20260814`.
-- Candidate image ID: `sha256:b78588c030b6a35a72b53fa441382bf42702b176969c38c5d893ab187a2ecb93`.
-- Candidate source revision: `c6700d3d885283510a9e9f0359e0d32434bc0e0d`.
-- Candidate source tree: `290eefb5e1f15d0a7ba906e45e1b9271719a1291`.
+- Candidate image ID: `sha256:ffa726964b06e7b5880e4620e5d4c60ae4b7ffb42748b5890626707fe61f8219`.
+- Candidate source revision: `f53a0f053ebab9e3c4379b194fb6d62387ca1ba8`.
+- Candidate source tree: `4314d754246c2e4c6b445b3c917f008b86d0a7c3`.
 - Candidate base image ID: `sha256:130bb55b34acabc3d43bf8d1af3d4cf01b53404d04550434992f0b7c486d8a1d`.
 - Two consecutive builds produced the same image ID. The build excludes generated Python caches and verifies source, Dockerfile, ignore-policy and base-image provenance labels before smoke testing.
 - The isolated smoke runs with Docker network mode `none`, no manager URL, no database, and no published host ports. HTTP, WebSocket and OTA probes pass.
@@ -16,6 +16,7 @@
 - The running 0.9.1 provider has emitted credential-bearing request diagnostics. No credential value is reproduced here. The candidate removes those request/header/body logs and rate-limits repeated failed handshakes; affected credentials should be rotated only after the redacted implementation is deployed.
 - The candidate also moves the synchronous Qwen3-ASR-Flash SDK call off the asyncio event loop, applies a 20-second default SDK/coroutine bound and passes the API key per request instead of mutating DashScope global state. This removes a candidate-only event-loop stall; it has not been deployed to the running 0.9.1 core.
 - The first live connection after the ASR canary produced no ASR error or transcript, but Doubao TTS returned ten HTTP 403 failures: two generated segments were each retried five times. The candidate now treats 403 as permanent, stops after one attempt, adds a request timeout and logs only status/type metadata. This prevents the retry stall and removes reply text/response bodies from logs, but valid TTS entitlement or a separately authorized provider is still required for audible replies.
+- The enabled `HuoshanDoubleStreamTTS` configuration has a credential set distinct from the failing Doubao TTS route and is the lowest-risk configured dual-stream canary candidate. Before any rollout, its v0.9.6 adapter was hardened to bound WebSocket open/close operations and redact text, session/file/connection identifiers, provider metadata and exception payloads. No provider request or billable call was made, so entitlement and real first-audio latency remain unknown.
 
 ## Compatibility boundary
 

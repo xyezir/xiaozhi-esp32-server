@@ -43,17 +43,18 @@ criteria:
     outcome: OTA 只从可信配置构造下载地址，且设备、绑定码、请求头和令牌不进入日志
     verifier:
       type: command
-      command: cd /home/luban/codebase/aiot/.worktrees/xiaozhi-server-v0.9.6-eval && docker run --rm --network none -v "$PWD/main/xiaozhi-server:/opt/xiaozhi-esp32-server" -v "$PWD/tests/fixtures/isolated-config.yaml:/opt/xiaozhi-esp32-server/data/.config.yaml:ro" -w /opt/xiaozhi-esp32-server --entrypoint python xiaozhi-server:0.9.6-candidate-20260814 -m unittest tests.test_doubao_tts_resilience tests.test_qwen3_asr_flash tests.test_ota_handler_security tests.test_sensitive_log_redaction tests.test_network_resource_safety tests.test_provider_canary_contract tests.test_doubao_stream_resilience
+      command: cd /home/luban/codebase/aiot/.worktrees/xiaozhi-server-v0.9.6-eval && docker run --rm --network none -v "$PWD/main/xiaozhi-server:/opt/xiaozhi-esp32-server" -v "$PWD/tests/fixtures/isolated-config.yaml:/opt/xiaozhi-esp32-server/data/.config.yaml:ro" -w /opt/xiaozhi-esp32-server --entrypoint python xiaozhi-server:0.9.6-candidate-20260814 -m unittest tests.test_huoshan_tts_security tests.test_doubao_tts_resilience tests.test_qwen3_asr_flash tests.test_ota_handler_security tests.test_sensitive_log_redaction tests.test_network_resource_safety tests.test_provider_canary_contract tests.test_doubao_stream_resilience
     environment: local
     required: true
     owner: agent
     evidence:
-      - 23 unittest cases passed in the candidate dependency image with network disabled; includes OTA origin validation, fail-closed behavior, binding-code and sensitive-log redaction, socket cleanup, provider configuration contracts, Doubao ASR authorization-failure backoff, Qwen ASR event-loop isolation and Doubao TTS permanent-failure handling
+      - 26 unittest cases passed in the candidate dependency image with network disabled; includes OTA origin validation, fail-closed behavior, binding-code and sensitive-log redaction, socket cleanup, provider configuration contracts, Doubao ASR authorization-failure backoff, Qwen ASR event-loop isolation, Doubao TTS permanent-failure handling and dual-stream TTS metadata redaction/connection bounds
       - the Doubao provider no longer logs headers, initialization request parameters, raw response data or arbitrary exception causes; HTTP 403 diagnostics are reduced to the status code and retries back off from 1 to 30 seconds while the buffered audio remains bounded
       - Qwen3-ASR-Flash runs the synchronous DashScope call outside the asyncio event loop, uses a per-call API key and applies both SDK and coroutine request bounds without logging provider payloads or credentials
       - Doubao TTS applies a request timeout, treats HTTP 403 as non-retryable, retains bounded retry for transient failures and removes generated text, response bodies, file paths and arbitrary exception payloads from TTS failure logs
+      - Huoshan dual-stream TTS applies WebSocket open/close bounds and keeps text, session ids, file paths, connection ids, server metadata and arbitrary exception payloads out of logs
     status: pass
-    last_verified_at: 2026-08-15T13:55:40+08:00
+    last_verified_at: 2026-08-15T14:03:16+08:00
   - id: AC-03
     outcome: 本地镜像可构建，并在不连接现有数据库、不占用现有端口的隔离环境启动且通过 HTTP/WebSocket 探测
     verifier:
@@ -63,11 +64,11 @@ criteria:
     required: true
     owner: agent
     evidence:
-      - image xiaozhi-server:0.9.6-candidate-20260814 built twice as sha256:b78588c030b6a35a72b53fa441382bf42702b176969c38c5d893ab187a2ecb93 from source revision c6700d3d885283510a9e9f0359e0d32434bc0e0d and tree 290eefb5e1f15d0a7ba906e45e1b9271719a1291
+      - image xiaozhi-server:0.9.6-candidate-20260814 built twice as sha256:ffa726964b06e7b5880e4620e5d4c60ae4b7ffb42748b5890626707fe61f8219 from source revision f53a0f053ebab9e3c4379b194fb6d62387ca1ba8 and tree 4314d754246c2e4c6b445b3c917f008b86d0a7c3
       - generated Python caches are recursively excluded; embedded provenance labels match the committed source, Dockerfile, ignore policy and base image sha256:130bb55b34acabc3d43bf8d1af3d4cf01b53404d04550434992f0b7c486d8a1d
       - isolated container used network none, no manager URL, no database and no host ports; HTTP, WebSocket, OTA, provider-contract and authorization-failure resilience checks passed
     status: pass
-    last_verified_at: 2026-08-15T13:55:40+08:00
+    last_verified_at: 2026-08-15T14:03:16+08:00
   - id: AC-04
     outcome: 升级方案明确现有 manager 兼容性、模型现状、候选镜像摘要、替换步骤、观察项和一条命令回滚
     verifier:
@@ -79,7 +80,7 @@ criteria:
     evidence:
       - docs/agent/reports/xiaozhi-server-v0.9.6-upgrade-20260814.md records current Doubao HTTP 403 evidence, credential-rotation boundary, compatibility, staged server/ASR/model rollout, source/base/image provenance and one-command core rollback
     status: pass
-    last_verified_at: 2026-08-15T13:55:40+08:00
+    last_verified_at: 2026-08-15T14:03:16+08:00
 completion:
   required_status: pass
   allow_not_applicable: true
