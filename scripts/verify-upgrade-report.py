@@ -45,6 +45,9 @@ def main() -> int:
     source_revision = required_value(text, "Candidate source revision", r"[0-9a-f]{40}")
     source_tree = required_value(text, "Candidate source tree", r"[0-9a-f]{40}")
     base_image_id = required_value(text, "Candidate base image ID", r"sha256:[0-9a-f]{64}")
+    deployment_manifest = required_value(
+        text, "Candidate deployment manifest", r"[0-9a-f]{40}"
+    )
 
     if run("docker", "image", "inspect", IMAGE, "--format", "{{.Id}}") != image_id:
         raise SystemExit("reported candidate image id does not match the local tag")
@@ -61,6 +64,7 @@ def main() -> int:
         "org.opencontainers.image.revision": source_revision,
         "org.opencontainers.image.base.digest": base_image_id,
         "io.xiaozhi.source-tree": source_tree,
+        "io.xiaozhi.deployment-manifest": deployment_manifest,
     }
     for label, expected in expected_labels.items():
         actual = run(

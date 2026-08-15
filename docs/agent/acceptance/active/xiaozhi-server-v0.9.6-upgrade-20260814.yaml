@@ -1,7 +1,7 @@
 schema_version: 1
 goal_id: xiaozhi-server-v0.9.6-upgrade-20260814
 goal: 形成可回滚、保留本地安全修复的 xiaozhi-server v0.9.6 升级候选并证明其可安全替换当前 0.9.1 核心服务
-status: in_progress
+status: passed
 authority:
   user_mandate: 检查后端是否为最新版，评估并按推荐升级，同时持续推进到验收
   autonomy_profile: nonprod-auto
@@ -64,11 +64,12 @@ criteria:
     required: true
     owner: agent
     evidence:
-      - image xiaozhi-server:0.9.6-candidate-20260814 built twice as sha256:ffa726964b06e7b5880e4620e5d4c60ae4b7ffb42748b5890626707fe61f8219 from source revision f53a0f053ebab9e3c4379b194fb6d62387ca1ba8 and tree 4314d754246c2e4c6b445b3c917f008b86d0a7c3
-      - generated Python caches are recursively excluded; embedded provenance labels match the committed source, Dockerfile, ignore policy and base image sha256:130bb55b34acabc3d43bf8d1af3d4cf01b53404d04550434992f0b7c486d8a1d
-      - isolated container used network none, no manager URL, no database and no host ports; HTTP, WebSocket, OTA, provider-contract and authorization-failure resilience checks passed
-    status: pending
-    last_verified_at: 2026-08-15T14:37:26+08:00
+      - image xiaozhi-server:0.9.6-candidate-20260814 built twice as sha256:e3f5dabd86232f4830d9374fd370f4fa49260e9366ff5430b1b0b1019abfcc43 from deployment/source revision 3be7f4745c0f516756c46c1f0c82d2fcf703fe28 and tree 4314d754246c2e4c6b445b3c917f008b86d0a7c3
+      - generated Python caches are recursively excluded; embedded provenance labels match the committed source, Dockerfile, ignore policy, deployment manifest 14f3d6ea58075fdda90a7402499047e9f365a21b and base image sha256:130bb55b34acabc3d43bf8d1af3d4cf01b53404d04550434992f0b7c486d8a1d
+      - isolated container used network none, no manager URL, no database, no host ports and the exact read-only VAD file mount resolved from the live Compose plus candidate override; HTTP, WebSocket, OTA, provider-contract and authorization-failure resilience checks passed
+      - the first live canary exposed a missing VAD mount and rolled back to 0.9.1 in about 30 seconds without restarting manager web/API, MySQL or Redis; the corrected verifier now rejects that topology before deployment
+    status: pass
+    last_verified_at: 2026-08-15T14:45:59+08:00
   - id: AC-04
     outcome: 升级方案明确现有 manager 兼容性、模型现状、候选镜像摘要、替换步骤、观察项和一条命令回滚
     verifier:
@@ -80,7 +81,7 @@ criteria:
     evidence:
       - docs/agent/reports/xiaozhi-server-v0.9.6-upgrade-20260814.md records current Doubao HTTP 403 evidence, credential-rotation boundary, compatibility, staged server/ASR/model rollout, source/base/image provenance and one-command core rollback
     status: pass
-    last_verified_at: 2026-08-15T14:03:16+08:00
+    last_verified_at: 2026-08-15T14:45:59+08:00
 completion:
   required_status: pass
   allow_not_applicable: true

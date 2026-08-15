@@ -16,7 +16,7 @@ Build an auditable, rollback-ready v0.9.6 core-server candidate without touching
 - [x] Run adversarial review and acceptance completion validation.
 - [x] Diagnose the current one-turn-only device failure: the local wake phrase still works, but the selected Doubao streaming ASR handshake returns HTTP 403 before any user utterance can be transcribed.
 - [x] Add bounded exponential retry, audio-buffer trimming and credential-safe diagnostics to the v0.9.6 Doubao streaming provider; pass the expanded offline regression suite and reproduce the rebuilt candidate image twice.
-- [ ] Re-verify the candidate against the exact live Compose model mounts after the first authorized canary failed closed and rolled back.
+- [x] Re-verify the candidate against the exact live Compose model mounts after the first authorized canary failed closed and rolled back.
 
 ## Surprises and discoveries
 
@@ -39,4 +39,6 @@ Build an auditable, rollback-ready v0.9.6 core-server candidate without touching
 
 ## Outcomes and retrospective
 
-The rollback-ready stable candidate is built reproducibly as `sha256:a2d7233c6a8e6b3646bec410e34cb53dfbd4c251218637bb3fd5da054c917cb7` from source revision `0761787db1dbe32a786661bdae382cb90bd69784` and source tree `518430602dc8cc1c8e99a61b21874db433bc59af`. Fifteen offline security/provider tests, isolated HTTP/WebSocket/OTA smoke and two consecutive image builds pass. The candidate now fails safely when Doubao rejects authorization, but it cannot make the current invalid provider entitlement succeed. The running service and provider selection remain unchanged; a controlled one-device server canary and a separately authorized ASR canary are still required.
+The rollback-ready stable candidate is built reproducibly as `sha256:e3f5dabd86232f4830d9374fd370f4fa49260e9366ff5430b1b0b1019abfcc43` from deployment/source revision `3be7f4745c0f516756c46c1f0c82d2fcf703fe28`, source tree `4314d754246c2e4c6b445b3c917f008b86d0a7c3` and deployment manifest `14f3d6ea58075fdda90a7402499047e9f365a21b`. Twenty-six offline security/provider tests, exact-topology isolated HTTP/WebSocket/OTA smoke and two consecutive image builds pass. The first production canary exposed and safely rolled back a missing VAD mount; the corrected candidate-only override now closes that deployment gap. A second one-device server canary remains required before the separately authorized dual-stream TTS canary.
+
+Quality Delta: Improved deployment-to-test fidelity, immutable deployment provenance and fail-fast model-path validation. Introduced one candidate-only read-only bind mount. Deferred repair of the legacy SenseVoice source path, which is currently a directory and is not used by the selected Qwen ASR. Evidence: two identical candidate builds, exact live Compose resolution, 26 offline tests and isolated protocol smoke.
