@@ -4,7 +4,7 @@
 UPDATE `ai_model_provider`
 SET `fields` = '[
   {"key": "ws_url", "type": "string", "label": "WebSocket地址"},
-  {"key": "api_key", "type": "string", "label": "新版豆包语音 API Key"},
+  {"key": "api_key", "type": "password", "label": "新版豆包语音 API Key"},
   {"key": "appid", "type": "string", "label": "旧版应用ID"},
   {"key": "access_token", "type": "string", "label": "旧版访问令牌"},
   {"key": "resource_id", "type": "string", "label": "资源ID"},
