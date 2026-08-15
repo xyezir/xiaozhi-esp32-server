@@ -1,7 +1,7 @@
 schema_version: 1
 goal_id: xiaozhi-server-v0.9.6-upgrade-20260814
 goal: 将已验收的 xiaozhi-server v0.9.6 安全候选升级到官方最新 main，补齐新版模型与火山语音 API Key 兼容，并发布到 xyezir fork
-status: in_progress
+status: passed
 authority:
   user_mandate: 检查后端是否为最新版，持续推进到验收；2026-08-15 明确要求将 xyezir/xiaozhi-esp32-server 直接升级到官方最新版、同步官方模型配置并发布
   autonomy_profile: nonprod-auto
@@ -87,9 +87,10 @@ criteria:
     evidence:
       - docs/model-provider-baseline.md records official model names, protocol boundaries and distinct Ark versus speech credentials without changing enabled models
       - docs/agent/reports/xiaozhi-server-v0.9.6-upgrade-20260814.md records current/legacy authentication, compatibility, source/base/image provenance, verification and rollback
-      - branch and pull-request publication evidence will be recorded after GitHub publication
-    status: pending
-    last_verified_at: null
+      - branch codex/xiaozhi-v0.9.6-upgrade-eval is published to xyezir/xiaozhi-esp32-server and pull request https://github.com/xyezir/xiaozhi-esp32-server/pull/1 is open with a clean merge state
+      - the fork defines no required GitHub status checks for this pull request; local verification evidence is recorded in the report and PR body
+    status: pass
+    last_verified_at: 2026-08-15T19:42:00+08:00
 completion:
   required_status: pass
   allow_not_applicable: true

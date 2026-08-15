@@ -22,7 +22,7 @@ Upgrade the accepted v0.9.6 core-server candidate to the official rolling `main`
 - [x] Merge the official latest `main` without rewriting shared history and preserve both upstream behavior and local security fixes.
 - [x] Add explicit current-console `X-Api-Key` support to the Huoshan double-stream provider while keeping legacy AppID/Access Token compatibility.
 - [x] Synchronize and document official model/provider defaults; complete focused, manager and image-level verification.
-- [ ] Publish the branch and reviewable PR to the fork, then record GitHub evidence and close the acceptance contract.
+- [x] Publish the branch and reviewable PR to the fork, record GitHub evidence and close the acceptance contract.
 
 ## Surprises and discoveries
 
@@ -54,6 +54,6 @@ Upgrade the accepted v0.9.6 core-server candidate to the official rolling `main`
 
 ## Outcomes and retrospective
 
-The mainline candidate is built reproducibly as `sha256:e1e4fb8b6136f7d121863a761d87ab876a456cab8f074610f40cc63c88921645` from build-input revision `40d4fdffdbbc8a27104c1e0ae998f500390206b8`, server tree `04d47042762548a9355fe4646dc47b06c77b55a0` and deployment manifest `14f3d6ea58075fdda90a7402499047e9f365a21b`. Thirty-one offline security/provider tests, 127 manager API tests, 9 manager Web tests, i18n validation, production Web build, exact-topology isolated HTTP/WebSocket/OTA smoke and two consecutive image builds pass. Production service and database state were not changed.
+The mainline candidate is built reproducibly as `sha256:e1e4fb8b6136f7d121863a761d87ab876a456cab8f074610f40cc63c88921645` from build-input revision `40d4fdffdbbc8a27104c1e0ae998f500390206b8`, server tree `04d47042762548a9355fe4646dc47b06c77b55a0` and deployment manifest `14f3d6ea58075fdda90a7402499047e9f365a21b`. Thirty-one offline security/provider tests, 127 manager API tests, 9 manager Web tests, i18n validation, production Web build, exact-topology isolated HTTP/WebSocket/OTA smoke and two consecutive image builds pass. The branch is published to the user's fork with PR `xyezir/xiaozhi-esp32-server#1`; production service and database state were not changed.
 
 Quality Delta: Improved current/legacy speech-auth separation, credential normalization, migration safety, model-source traceability, deployment-to-test fidelity and immutable image provenance. Introduced one additive nullable `api_key` configuration field and no automatic model switch. Deferred realtime Qwen ASR/TTS adapters and existing Web static-asset size debt. Evidence: network-none provider tests, full disposable-database manager suite, Web build and reproducible isolated runtime smoke.

@@ -4,6 +4,7 @@
 
 - Official stable remains `v0.9.6`. This branch also contains the official rolling `main` snapshot `17560a7d295a0a7f3e46add30bb584d486b651c3`, merged without rewriting the accepted local security history.
 - `xyezir/main` matched official `main` at the start of this delivery. The release branch adds the previously accepted OTA/logging/provider hardening, current Volcengine speech authentication and a verified model/provider baseline.
+- Release branch `codex/xiaozhi-v0.9.6-upgrade-eval` is published to the user's fork with review PR `https://github.com/xyezir/xiaozhi-esp32-server/pull/1`; GitHub reports a clean merge state and no configured status checks.
 - Candidate image: `xiaozhi-server:0.9.6-main-20260815-candidate`.
 - Candidate image ID: `sha256:e1e4fb8b6136f7d121863a761d87ab876a456cab8f074610f40cc63c88921645`.
 - Candidate source revision: `40d4fdffdbbc8a27104c1e0ae998f500390206b8`.
