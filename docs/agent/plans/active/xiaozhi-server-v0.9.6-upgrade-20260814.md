@@ -23,6 +23,7 @@ Upgrade the accepted v0.9.6 core-server candidate to the official rolling `main`
 - [x] Add explicit current-console `X-Api-Key` support to the Huoshan double-stream provider while keeping legacy AppID/Access Token compatibility.
 - [x] Synchronize and document official model/provider defaults; complete focused, manager and image-level verification.
 - [x] Publish the branch and reviewable PR to the fork, record GitHub evidence and close the acceptance contract.
+- [x] Build and deploy a disposable full-stack shadow with no host ports; verify manager migration, Web/API routes and core-to-manager authenticated configuration fetch, then remove all shadow containers and network.
 
 ## Surprises and discoveries
 
@@ -38,6 +39,7 @@ Upgrade the accepted v0.9.6 core-server candidate to the official rolling `main`
 - Volcengine now exposes a single API Key in its current speech console, while the existing manager schema and adapter only send legacy `X-Api-App-Key` and `X-Api-Access-Key`. Treating an Ark or speech API Key as a legacy access token cannot work reliably.
 - The manager test suite defaults to `skipTests=true`; a bare `mvn test` is not evidence. Explicit `-DskipTests=false` plus disposable MySQL/Redis is required for the 127-test integration run.
 - The upstream Web build succeeds but retains existing static-asset size warnings. They are not introduced by this provider/configuration change and remain separate performance debt.
+- A Unix-socket `mysqladmin ping` can report the MySQL image's temporary initialization server as ready even though its network port is disabled and about to restart. The shadow gate now requires the final TCP listener before starting manager API; the failed probe cleaned up without touching production.
 
 ## Decision log
 
@@ -51,9 +53,10 @@ Upgrade the accepted v0.9.6 core-server candidate to the official rolling `main`
 - 2026-08-15: Use a merge commit to bring official `main` into the accepted branch; do not rebase or force-push the audited local history. Publish only to the user's `xyezir` fork.
 - 2026-08-15: Support both current `X-Api-Key` and legacy AppID/Access Token authentication explicitly. Never silently reinterpret a Fireworks/Ark/other-provider key as a speech credential, and never issue a billable provider call during repository validation.
 - 2026-08-15: Name the local image `0.9.6-main-20260815-candidate` so its rolling-main provenance is visible; keep the old production image untouched under the read-only boundary.
+- 2026-08-15: Validate the combined manager Web/API image only in a disposable internal network with a fresh database and Redis. Publish no host ports, do not import production data, and require cleanup plus production-container identity checks before accepting it.
 
 ## Outcomes and retrospective
 
-The mainline candidate is built reproducibly as `sha256:e1e4fb8b6136f7d121863a761d87ab876a456cab8f074610f40cc63c88921645` from build-input revision `40d4fdffdbbc8a27104c1e0ae998f500390206b8`, server tree `04d47042762548a9355fe4646dc47b06c77b55a0` and deployment manifest `14f3d6ea58075fdda90a7402499047e9f365a21b`. Thirty-one offline security/provider tests, 127 manager API tests, 9 manager Web tests, i18n validation, production Web build, exact-topology isolated HTTP/WebSocket/OTA smoke and two consecutive image builds pass. The branch is published to the user's fork with PR `xyezir/xiaozhi-esp32-server#1`; production service and database state were not changed.
+The mainline candidate is built reproducibly as `sha256:e1e4fb8b6136f7d121863a761d87ab876a456cab8f074610f40cc63c88921645` from build-input revision `40d4fdffdbbc8a27104c1e0ae998f500390206b8`, server tree `04d47042762548a9355fe4646dc47b06c77b55a0` and deployment manifest `14f3d6ea58075fdda90a7402499047e9f365a21b`. Thirty-one offline security/provider tests, 127 manager API tests, 9 manager Web tests, i18n validation, production Web build, exact-topology isolated HTTP/WebSocket/OTA smoke and two consecutive core image builds pass. The combined manager image `sha256:4e6bb8c3220c0f5d42ce7f0e6293e9fc4b86d7addee0b118a16d906ff92939a1`, bound to committed build inputs at `12e130f47399baf41b614c1a7225e950872ddef7`, also passed two disposable internal-only full-stack shadow runs covering migration, Web/API, core startup and authenticated core-to-manager configuration fetch. PR `xyezir/xiaozhi-esp32-server#1` is merged; production service and database state were not changed.
 
-Quality Delta: Improved current/legacy speech-auth separation, credential normalization, migration safety, model-source traceability, deployment-to-test fidelity and immutable image provenance. Introduced one additive nullable `api_key` configuration field and no automatic model switch. Deferred realtime Qwen ASR/TTS adapters and existing Web static-asset size debt. Evidence: network-none provider tests, full disposable-database manager suite, Web build and reproducible isolated runtime smoke.
+Quality Delta: Improved current/legacy speech-auth separation, credential normalization, migration safety, model-source traceability, deployment-to-test fidelity, immutable image provenance, clean Docker build contexts and MySQL readiness correctness. Introduced one reusable non-production shadow verifier and no automatic model switch or published port. Deferred realtime Qwen ASR/TTS adapters, provider-billable smoke, real-device conversation acceptance and existing Web static-asset size/dependency debt. Evidence: network-none provider tests, full disposable-database manager suite, Web build, reproducible isolated runtime smoke and two self-cleaning full-stack shadow runs.
