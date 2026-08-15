@@ -26,6 +26,11 @@ class SensitiveLogRedactionTest(unittest.TestCase):
         doubao = (ROOT / "core/providers/asr/doubao_stream.py").read_text()
         self.assertNotIn("conn - Headers:", connection)
         self.assertNotIn("headers: {headers}", doubao)
+        self.assertNotIn("发送初始化请求: {request_params}", doubao)
+        self.assertNotIn("构造请求参数:", doubao)
+        self.assertNotIn("建立ASR连接失败: {str(e)}", doubao)
+        self.assertNotIn("错误原因: {str(e.__cause__)}", doubao)
+        self.assertNotIn("原始响应数据:", doubao)
 
     def test_device_identifiers_are_not_interpolated_into_operational_logs(self):
         prompt_manager = (ROOT / "core/utils/prompt_manager.py").read_text()
