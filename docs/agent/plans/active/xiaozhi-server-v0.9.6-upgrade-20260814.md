@@ -16,6 +16,7 @@ Build an auditable, rollback-ready v0.9.6 core-server candidate without touching
 - [x] Run adversarial review and acceptance completion validation.
 - [x] Diagnose the current one-turn-only device failure: the local wake phrase still works, but the selected Doubao streaming ASR handshake returns HTTP 403 before any user utterance can be transcribed.
 - [x] Add bounded exponential retry, audio-buffer trimming and credential-safe diagnostics to the v0.9.6 Doubao streaming provider; pass the expanded offline regression suite and reproduce the rebuilt candidate image twice.
+- [ ] Re-verify the candidate against the exact live Compose model mounts after the first authorized canary failed closed and rolled back.
 
 ## Surprises and discoveries
 
@@ -25,6 +26,7 @@ Build an auditable, rollback-ready v0.9.6 core-server candidate without touching
 - The old manager provides the two required core configuration routes. New v0.9.6 correct-word, chat-title and address-book calls are optional and degrade on the old manager, so those features are not part of a core-only rollout.
 - The isolated candidate starts successfully with network disabled and without a manager URL or database; HTTP, WebSocket and OTA probes pass.
 - The first recorded image ID was not reproducible because nested ignored Python caches still entered the Docker context. Recursive exclusions and embedded source/base provenance now make consecutive builds identical; the superseded image was never deployed.
+- The first authorized core-only canary on 2026-08-15 entered a restart loop because the live Compose file mounted only the legacy SenseVoice path while v0.9.6 also requires `silero_vad.onnx`. The rollback restored 0.9.1 in about 30 seconds without restarting manager web/API, MySQL or Redis. The previous isolated smoke had hidden this mismatch by mounting the entire host `models` directory.
 
 ## Decision log
 
@@ -33,6 +35,7 @@ Build an auditable, rollback-ready v0.9.6 core-server candidate without touching
 - 2026-08-14: Do not switch to a paid streaming TTS or a new LLM until account access, price and latency are measured with an explicit small test budget.
 - 2026-08-15: Do not treat the local wake acknowledgement as a successful server turn. Keep the running provider selection unchanged under the read-only production boundary; a separately authorized one-device ASR canary must either repair the current Doubao entitlement or select one already-configured alternative such as Qwen3-ASR-Flash.
 - 2026-08-15: Rotate any credential that may have appeared in legacy logs only after the redacted provider is deployed, so replacement values cannot be leaked by the same code path.
+- 2026-08-15: Preserve one-variable rollout semantics by adding a read-only, exact-file VAD mount through a candidate-only Compose override. Do not mutate the base production Compose file or mount the whole models tree.
 
 ## Outcomes and retrospective
 

@@ -1,7 +1,7 @@
 schema_version: 1
 goal_id: xiaozhi-server-v0.9.6-upgrade-20260814
 goal: 形成可回滚、保留本地安全修复的 xiaozhi-server v0.9.6 升级候选并证明其可安全替换当前 0.9.1 核心服务
-status: passed
+status: in_progress
 authority:
   user_mandate: 检查后端是否为最新版，评估并按推荐升级，同时持续推进到验收
   autonomy_profile: nonprod-auto
@@ -67,8 +67,8 @@ criteria:
       - image xiaozhi-server:0.9.6-candidate-20260814 built twice as sha256:ffa726964b06e7b5880e4620e5d4c60ae4b7ffb42748b5890626707fe61f8219 from source revision f53a0f053ebab9e3c4379b194fb6d62387ca1ba8 and tree 4314d754246c2e4c6b445b3c917f008b86d0a7c3
       - generated Python caches are recursively excluded; embedded provenance labels match the committed source, Dockerfile, ignore policy and base image sha256:130bb55b34acabc3d43bf8d1af3d4cf01b53404d04550434992f0b7c486d8a1d
       - isolated container used network none, no manager URL, no database and no host ports; HTTP, WebSocket, OTA, provider-contract and authorization-failure resilience checks passed
-    status: pass
-    last_verified_at: 2026-08-15T14:03:16+08:00
+    status: pending
+    last_verified_at: 2026-08-15T14:37:26+08:00
   - id: AC-04
     outcome: 升级方案明确现有 manager 兼容性、模型现状、候选镜像摘要、替换步骤、观察项和一条命令回滚
     verifier:
