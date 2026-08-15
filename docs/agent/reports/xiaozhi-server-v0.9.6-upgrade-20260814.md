@@ -6,15 +6,16 @@
 - Official stable `v0.9.6` is the candidate baseline. The official rolling `main` has additional unreleased commits, so it is not used as the replacement target.
 - The current custom branch is based on an older upstream revision and conflicts with `v0.9.6` in server, manager and dependency files. The candidate therefore starts at the exact stable tag and ports only the locally required security changes.
 - Candidate image: `xiaozhi-server:0.9.6-candidate-20260814`.
-- Candidate image ID: `sha256:4955077b7a065067251eebc2466c68e01d395922462a79f0fb557c9f0823e962`.
-- Candidate source revision: `e98a3d25c4fa2fd816d0a3bc177dfb21817a020d`.
-- Candidate source tree: `46e5828a724dea4ace00e939821262f5237e0780`.
+- Candidate image ID: `sha256:b78588c030b6a35a72b53fa441382bf42702b176969c38c5d893ab187a2ecb93`.
+- Candidate source revision: `c6700d3d885283510a9e9f0359e0d32434bc0e0d`.
+- Candidate source tree: `290eefb5e1f15d0a7ba906e45e1b9271719a1291`.
 - Candidate base image ID: `sha256:130bb55b34acabc3d43bf8d1af3d4cf01b53404d04550434992f0b7c486d8a1d`.
 - Two consecutive builds produced the same image ID. The build excludes generated Python caches and verifies source, Dockerfile, ignore-policy and base-image provenance labels before smoke testing.
 - The isolated smoke runs with Docker network mode `none`, no manager URL, no database, and no published host ports. HTTP, WebSocket and OTA probes pass.
 - The prior live route used Doubao streaming ASR, `qwen-plus` and Doubao TTS. Its ASR WebSocket handshakes returned HTTP 403. An explicitly authorized one-device canary now selects Qwen3-ASR-Flash while retaining the running 0.9.1 core, `qwen-plus`, Doubao TTS and firmware 2.3.11; manager configuration and a provider sample pass, but a real device conversation still needs human confirmation.
 - The running 0.9.1 provider has emitted credential-bearing request diagnostics. No credential value is reproduced here. The candidate removes those request/header/body logs and rate-limits repeated failed handshakes; affected credentials should be rotated only after the redacted implementation is deployed.
 - The candidate also moves the synchronous Qwen3-ASR-Flash SDK call off the asyncio event loop, applies a 20-second default SDK/coroutine bound and passes the API key per request instead of mutating DashScope global state. This removes a candidate-only event-loop stall; it has not been deployed to the running 0.9.1 core.
+- The first live connection after the ASR canary produced no ASR error or transcript, but Doubao TTS returned ten HTTP 403 failures: two generated segments were each retried five times. The candidate now treats 403 as permanent, stops after one attempt, adds a request timeout and logs only status/type metadata. This prevents the retry stall and removes reply text/response bodies from logs, but valid TTS entitlement or a separately authorized provider is still required for audible replies.
 
 ## Compatibility boundary
 
@@ -27,6 +28,7 @@
 
 - The known Doubao authorization blocker has been removed from one device by the authorized Qwen3-ASR-Flash canary. Wi-Fi association, the LLM and TTS remain unchanged; human end-to-end turns are still required before attributing any remaining latency or ordering problem.
 - Keep `qwen-plus` and Doubao TTS unchanged while validating the ASR canary. Measure authorization success, end-of-utterance latency and transcript accuracy before keeping it.
+- Do not interpret the TTS hardening as a working voice provider. Repair Doubao TTS entitlement or authorize a one-device dual-stream TTS canary only after the current ASR observation; keep the LLM and server version fixed during that measurement.
 - `qwen-plus` is not the newest available Qwen family. For a voice companion, first-token latency and consistent streaming matter more than selecting the largest model. Evaluate a current low-latency Qwen Flash model supported by the account, then compare p50/p95 first-token time and answer quality against `qwen-plus`.
 - Keep the device in manual push-to-talk mode during the first server rollout. This removes false full-duplex interruptions while server AEC and streaming providers are evaluated independently.
 - Evaluate `cosyvoice-v2` or another dual-stream TTS only in a later separately budgeted test, after ASR and server behavior are stable. Measure first-audio latency, timeout rate and sentence ordering before adoption.
@@ -47,7 +49,7 @@ This is a proposed test-environment procedure; it has not been run against the c
 - No crash loop, database migration or manager web/API restart.
 - OTA and WebSocket connect without retry storms.
 - No authorization header, device identifier, client identifier or bind code appears in logs.
-- An invalid ASR entitlement produces a bounded status-only error and a 1-30 second retry cooldown rather than one handshake per PCM frame.
+- An invalid ASR entitlement produces a bounded status-only error and a 1-30 second retry cooldown rather than one handshake per PCM frame; a permanent TTS 403 stops after one status-only failure instead of five content-bearing retries.
 - For at least ten manual turns: no spontaneous abort, no answer reordering, no duplicated user utterance, and no provider timeout.
 - Record ASR completion, LLM first token, TTS first audio and total answer latency. A regression from the existing baseline blocks promotion.
 - Missing optional manager endpoints may log a bounded warning but must not terminate a conversation.
