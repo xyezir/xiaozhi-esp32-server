@@ -19,9 +19,10 @@ Upgrade the accepted v0.9.6 core-server candidate to the official rolling `main`
 - [x] Re-verify the candidate against the exact live Compose model mounts after the first authorized canary failed closed and rolled back.
 - [x] Redeploy the reproducibly rebuilt candidate after the authorized Huoshan probe exposed a placeholder-key log echo; keep the failed TTS relation rolled back.
 - [x] Verify that `xyezir/main` exactly matches official `main` at task start while the accepted candidate has 18 local commits and lacks 21 upstream commits.
-- [ ] Merge the official latest `main` without rewriting shared history and resolve conflicts while preserving both upstream behavior and local security fixes.
-- [ ] Add explicit current-console `X-Api-Key` support to the Huoshan double-stream provider while keeping legacy AppID/Access Token compatibility.
-- [ ] Synchronize and document official model/provider defaults, run focused and image-level verification, then publish the branch and PR to the fork.
+- [x] Merge the official latest `main` without rewriting shared history and preserve both upstream behavior and local security fixes.
+- [x] Add explicit current-console `X-Api-Key` support to the Huoshan double-stream provider while keeping legacy AppID/Access Token compatibility.
+- [x] Synchronize and document official model/provider defaults; complete focused, manager and image-level verification.
+- [ ] Publish the branch and reviewable PR to the fork, then record GitHub evidence and close the acceptance contract.
 
 ## Surprises and discoveries
 
@@ -35,6 +36,8 @@ Upgrade the accepted v0.9.6 core-server candidate to the official rolling `main`
 - The second core canary passed. The separately authorized Huoshan TTS relation then changed exactly one agent and its matching voice, but the one short provider probe revealed that the configured access token was still a placeholder and returned no audio. The relation rolled back immediately. This path also exposed that `check_model_key` echoed its current value into logs, so the candidate must be rebuilt before the core canary is retained.
 - The official latest Release remains v0.9.6, but rolling `main` is 21 commits ahead of the tag. The user's fork already matches that upstream snapshot; the unpublished value is the accepted candidate's 18 security/runtime commits plus the new API-key compatibility.
 - Volcengine now exposes a single API Key in its current speech console, while the existing manager schema and adapter only send legacy `X-Api-App-Key` and `X-Api-Access-Key`. Treating an Ark or speech API Key as a legacy access token cannot work reliably.
+- The manager test suite defaults to `skipTests=true`; a bare `mvn test` is not evidence. Explicit `-DskipTests=false` plus disposable MySQL/Redis is required for the 127-test integration run.
+- The upstream Web build succeeds but retains existing static-asset size warnings. They are not introduced by this provider/configuration change and remain separate performance debt.
 
 ## Decision log
 
@@ -47,9 +50,10 @@ Upgrade the accepted v0.9.6 core-server candidate to the official rolling `main`
 - 2026-08-15: Treat a placeholder provider token as a failed TTS canary, not a billable success. Redact the value at the shared model-key validation boundary and do not retry another provider without fresh authorization.
 - 2026-08-15: Use a merge commit to bring official `main` into the accepted branch; do not rebase or force-push the audited local history. Publish only to the user's `xyezir` fork.
 - 2026-08-15: Support both current `X-Api-Key` and legacy AppID/Access Token authentication explicitly. Never silently reinterpret a Fireworks/Ark/other-provider key as a speech credential, and never issue a billable provider call during repository validation.
+- 2026-08-15: Name the local image `0.9.6-main-20260815-candidate` so its rolling-main provenance is visible; keep the old production image untouched under the read-only boundary.
 
 ## Outcomes and retrospective
 
-The rollback-ready stable candidate is built reproducibly as `sha256:7e6b3cfde68a261ea1c070255806d8d8e8f4a78949191b784044d3f1b8559cf9` from deployment/source revision `b002d42a5cd257facb1b1fda8f07b27406000753`, source tree `9adcf8688967bf9e152a7a7434cd0033120eab0a` and deployment manifest `14f3d6ea58075fdda90a7402499047e9f365a21b`. Twenty-seven offline security/provider tests, exact-topology isolated HTTP/WebSocket/OTA smoke and two consecutive image builds pass. The first production canary exposed and safely rolled back a missing VAD mount; the corrected core canary passed. The authorized dual-stream TTS canary then exposed a placeholder access token and rolled its model plus voice relation back. The final redaction rebuild is deployed with zero restarts and passes HTTP, WebSocket, manager base/private configuration and unchanged companion-container checks.
+The mainline candidate is built reproducibly as `sha256:e1e4fb8b6136f7d121863a761d87ab876a456cab8f074610f40cc63c88921645` from build-input revision `40d4fdffdbbc8a27104c1e0ae998f500390206b8`, server tree `04d47042762548a9355fe4646dc47b06c77b55a0` and deployment manifest `14f3d6ea58075fdda90a7402499047e9f365a21b`. Thirty-one offline security/provider tests, 127 manager API tests, 9 manager Web tests, i18n validation, production Web build, exact-topology isolated HTTP/WebSocket/OTA smoke and two consecutive image builds pass. Production service and database state were not changed.
 
-Quality Delta: Improved deployment-to-test fidelity, immutable deployment provenance, fail-fast model-path validation and shared invalid-key log redaction. Introduced one candidate-only read-only bind mount. Deferred repair of the legacy SenseVoice source path, which is currently a directory and is not used by the selected Qwen ASR. Evidence: two identical candidate builds, exact live Compose resolution, 27 offline tests and isolated protocol smoke.
+Quality Delta: Improved current/legacy speech-auth separation, credential normalization, migration safety, model-source traceability, deployment-to-test fidelity and immutable image provenance. Introduced one additive nullable `api_key` configuration field and no automatic model switch. Deferred realtime Qwen ASR/TTS adapters and existing Web static-asset size debt. Evidence: network-none provider tests, full disposable-database manager suite, Web build and reproducible isolated runtime smoke.

@@ -37,10 +37,11 @@ criteria:
     required: true
     owner: agent
     evidence:
-      - candidate worktree HEAD descends from the exact official v0.9.6 tag and git diff --check passes
-      - rolling main was reviewed separately and intentionally excluded from this stable candidate
-    status: pending
-    last_verified_at: null
+      - official origin/main and fork/main both resolved to 17560a7d295a0a7f3e46add30bb584d486b651c3 at integration time
+      - merge commit 0300a007 includes that exact official main without history rewriting; accepted local hardening remains auditable before the merge
+      - git merge-base confirms origin/main is an ancestor and git diff --check passes
+    status: pass
+    last_verified_at: 2026-08-15T19:36:00+08:00
   - id: AC-02
     outcome: OTA 只从可信配置构造下载地址，且设备、绑定码、请求头和令牌不进入日志
     verifier:
@@ -50,14 +51,15 @@ criteria:
     required: true
     owner: agent
     evidence:
-      - 27 unittest cases passed in the candidate dependency image with network disabled; includes OTA origin validation, fail-closed behavior, binding-code and sensitive-log redaction, socket cleanup, provider configuration contracts, Doubao ASR authorization-failure backoff, Qwen ASR event-loop isolation, Doubao TTS permanent-failure handling, dual-stream TTS metadata redaction/connection bounds and placeholder-key redaction
+      - 31 unittest cases passed in the candidate dependency image with network disabled; includes OTA origin validation, fail-closed behavior, binding-code and sensitive-log redaction, socket cleanup, provider configuration contracts, Doubao ASR authorization-failure backoff, Qwen ASR event-loop isolation, Doubao TTS permanent-failure handling and dual-stream TTS authentication/redaction
+      - current-console api_key emits only X-Api-Key; legacy AppID/Access Token emits only X-Api-App-Key and X-Api-Access-Key; explicit api_key wins, credentials are normalized and placeholders fail before network
       - the Doubao provider no longer logs headers, initialization request parameters, raw response data or arbitrary exception causes; HTTP 403 diagnostics are reduced to the status code and retries back off from 1 to 30 seconds while the buffered audio remains bounded
       - Qwen3-ASR-Flash runs the synchronous DashScope call outside the asyncio event loop, uses a per-call API key and applies both SDK and coroutine request bounds without logging provider payloads or credentials
       - Doubao TTS applies a request timeout, treats HTTP 403 as non-retryable, retains bounded retry for transient failures and removes generated text, response bodies, file paths and arbitrary exception payloads from TTS failure logs
       - Huoshan dual-stream TTS applies WebSocket open/close bounds and keeps text, session ids, file paths, connection ids, server metadata and arbitrary exception payloads out of logs
       - shared model-key validation no longer echoes an empty, invalid or placeholder credential into provider logs
-    status: pending
-    last_verified_at: null
+    status: pass
+    last_verified_at: 2026-08-15T19:36:00+08:00
   - id: AC-03
     outcome: 本地镜像可构建，并在不连接现有数据库、不占用现有端口的隔离环境启动且通过 HTTP/WebSocket 探测
     verifier:
@@ -67,13 +69,13 @@ criteria:
     required: true
     owner: agent
     evidence:
-      - image xiaozhi-server:0.9.6-candidate-20260814 built twice as sha256:7e6b3cfde68a261ea1c070255806d8d8e8f4a78949191b784044d3f1b8559cf9 from deployment/source revision b002d42a5cd257facb1b1fda8f07b27406000753 and tree 9adcf8688967bf9e152a7a7434cd0033120eab0a
-      - generated Python caches are recursively excluded; embedded provenance labels match the committed source, Dockerfile, ignore policy, deployment manifest 14f3d6ea58075fdda90a7402499047e9f365a21b and base image sha256:130bb55b34acabc3d43bf8d1af3d4cf01b53404d04550434992f0b7c486d8a1d
-      - isolated container used network none, no manager URL, no database, no host ports and the exact read-only VAD file mount resolved from the live Compose plus candidate override; HTTP, WebSocket, OTA, provider-contract and authorization-failure resilience checks passed
-      - the first live canary exposed a missing VAD mount and rolled back to 0.9.1 in about 30 seconds without restarting manager web/API, MySQL or Redis; the corrected verifier now rejects that topology before deployment
-      - final image sha256:7e6b3cfde68a261ea1c070255806d8d8e8f4a78949191b784044d3f1b8559cf9 is live as server 0.9.6 with zero restarts; HTTP, WebSocket, manager base/private configuration and exact read-only VAD mount checks pass while manager web/API, MySQL and Redis retain their original container identities
-    status: pending
-    last_verified_at: null
+      - image xiaozhi-server:0.9.6-main-20260815-candidate built twice as sha256:e1e4fb8b6136f7d121863a761d87ab876a456cab8f074610f40cc63c88921645 from build-input revision 40d4fdffdbbc8a27104c1e0ae998f500390206b8 and server tree 04d47042762548a9355fe4646dc47b06c77b55a0
+      - embedded provenance labels match the committed source, Dockerfile, ignore policy, deployment manifest 14f3d6ea58075fdda90a7402499047e9f365a21b and base image sha256:130bb55b34acabc3d43bf8d1af3d4cf01b53404d04550434992f0b7c486d8a1d
+      - isolated container used network none, no manager URL, no database, no host ports and the exact read-only VAD file mount resolved from the live Compose plus candidate override; HTTP, WebSocket and OTA checks passed twice
+      - manager API 127/127 tests passed with the new Liquibase change set against disposable MySQL 9.6 and Redis 8; manager Web 9/9 tests, six-locale validation and production build passed
+      - production containers and database were not changed; the previously deployed 0.9.6 image remains live under the read-only boundary
+    status: pass
+    last_verified_at: 2026-08-15T19:36:00+08:00
   - id: AC-04
     outcome: 升级方案明确官方模型同步、兼容性、候选摘要和回滚，且任务分支已发布到 xyezir fork 并创建 PR
     verifier:
@@ -83,7 +85,9 @@ criteria:
     required: true
     owner: agent
     evidence:
-      - docs/agent/reports/xiaozhi-server-v0.9.6-upgrade-20260814.md records current Doubao HTTP 403 evidence, credential-rotation boundary, compatibility, staged server/ASR/model rollout, source/base/image provenance and one-command core rollback
+      - docs/model-provider-baseline.md records official model names, protocol boundaries and distinct Ark versus speech credentials without changing enabled models
+      - docs/agent/reports/xiaozhi-server-v0.9.6-upgrade-20260814.md records current/legacy authentication, compatibility, source/base/image provenance, verification and rollback
+      - branch and pull-request publication evidence will be recorded after GitHub publication
     status: pending
     last_verified_at: null
 completion:
