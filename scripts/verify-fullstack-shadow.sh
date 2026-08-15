@@ -140,15 +140,15 @@ done
 
 migration_count="$(docker exec "$db_container" mysql -N -uroot -p"$db_password" xiaozhi_esp32_server \
   -e "SELECT COUNT(*) FROM DATABASECHANGELOG WHERE ID = '202608151730';" 2>/dev/null)"
-provider_field_count="$(docker exec "$db_container" mysql -N -uroot -p"$db_password" xiaozhi_esp32_server \
-  -e "SELECT COUNT(*) FROM ai_model_provider WHERE id = 'SYSTEM_TTS_HSDSTTS' AND JSON_SEARCH(fields, 'one', 'api_key') IS NOT NULL;" 2>/dev/null)"
+provider_password_field_count="$(docker exec "$db_container" mysql -N -uroot -p"$db_password" xiaozhi_esp32_server \
+  -e "SELECT COUNT(*) FROM ai_model_provider WHERE id = 'SYSTEM_TTS_HSDSTTS' AND JSON_UNQUOTE(JSON_EXTRACT(fields, '$[1].key')) = 'api_key' AND JSON_UNQUOTE(JSON_EXTRACT(fields, '$[1].type')) = 'password';" 2>/dev/null)"
 model_config_count="$(docker exec "$db_container" mysql -N -uroot -p"$db_password" xiaozhi_esp32_server \
   -e "SELECT COUNT(*) FROM ai_model_config WHERE id IN ('TTS_HuoshanDoubleStreamTTS', 'TTS_HSDSTTS_V2') AND JSON_UNQUOTE(JSON_EXTRACT(config_json, '$.api_key')) = '';" 2>/dev/null)"
 shadow_secret="$(docker exec "$db_container" mysql -N -uroot -p"$db_password" xiaozhi_esp32_server \
   -e "SELECT param_value FROM sys_params WHERE param_code = 'server.secret';" 2>/dev/null)"
 
 test "$migration_count" = "1"
-test "$provider_field_count" = "1"
+test "$provider_password_field_count" = "1"
 test "$model_config_count" = "2"
 test -n "$shadow_secret"
 test "$shadow_secret" != "null"
