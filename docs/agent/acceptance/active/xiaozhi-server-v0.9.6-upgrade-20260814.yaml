@@ -1,9 +1,9 @@
 schema_version: 1
 goal_id: xiaozhi-server-v0.9.6-upgrade-20260814
-goal: 形成可回滚、保留本地安全修复的 xiaozhi-server v0.9.6 升级候选并证明其可安全替换当前 0.9.1 核心服务
-status: passed
+goal: 将已验收的 xiaozhi-server v0.9.6 安全候选升级到官方最新 main，补齐新版模型与火山语音 API Key 兼容，并发布到 xyezir fork
+status: in_progress
 authority:
-  user_mandate: 检查后端是否为最新版，评估并按推荐升级，同时持续推进到验收
+  user_mandate: 检查后端是否为最新版，持续推进到验收；2026-08-15 明确要求将 xyezir/xiaozhi-esp32-server 直接升级到官方最新版、同步官方模型配置并发布
   autonomy_profile: nonprod-auto
   coordinator_workspace: /home/luban/codebase/aiot/esp32-nezuko
   writer_workspaces:
@@ -12,33 +12,35 @@ authority:
     - codex/xiaozhi-v0.9.6-upgrade-eval
 scope:
   in:
-    - 以官方稳定版 v0.9.6 为升级基线，不跟随滚动 main
+    - 以官方稳定版 v0.9.6 和已验收候选为安全基线，合入 2026-08-15 的官方最新 main
     - 移植当前部署依赖的 OTA 信任边界与敏感日志脱敏
-    - 构建本地候选镜像并在隔离端口完成启动和协议 smoke
-    - 记录与现有 manager、配置、数据卷和回滚镜像的兼容边界
+    - 同步官方模型供应器、模型名称和默认配置，并为火山双流 TTS 同时支持新版 API Key 与旧版 AppID/Access Token
+    - 构建本地候选镜像并在隔离环境完成启动和协议 smoke
+    - 推送任务分支到 xyezir/xiaozhi-esp32-server 并创建可审查的发布 PR
   out:
-    - 未经额外授权替换当前运行中的服务或修改现有数据库
-    - 在未验证计费和权限前切换付费模型或 TTS 提供商
+    - 替换当前运行中的生产服务或修改现有生产数据库
+    - 在未验证计费和权限前调用付费模型或 TTS 提供商
     - 将固件定制代码整体迁移到 ESP-IDF 6
 required_environments:
   - local
+  - github
 stop_conditions:
-  - 候选需要写入当前数据库或覆盖当前运行容器才能继续验证
+  - 候选需要写入当前生产数据库或覆盖当前运行容器才能继续验证
   - 发现无法保留的 OTA 安全边界、密钥泄漏风险或不可回滚迁移
 criteria:
   - id: AC-01
-    outcome: 候选严格基于官方 v0.9.6，且与滚动 main 的差异和本地安全移植可审计
+    outcome: 候选包含 2026-08-15 官方最新 main，且本地安全移植和上游增量可审计
     verifier:
       type: command
-      command: cd /home/luban/codebase/aiot/.worktrees/xiaozhi-server-v0.9.6-eval && test "$(git merge-base HEAD v0.9.6)" = "$(git rev-parse v0.9.6)" && git diff --check
+      command: cd /home/luban/codebase/aiot/.worktrees/xiaozhi-server-v0.9.6-eval && test "$(git merge-base HEAD origin/main)" = "$(git rev-parse origin/main)" && git diff --check
     environment: local
     required: true
     owner: agent
     evidence:
       - candidate worktree HEAD descends from the exact official v0.9.6 tag and git diff --check passes
       - rolling main was reviewed separately and intentionally excluded from this stable candidate
-    status: pass
-    last_verified_at: 2026-08-14T20:35:00+08:00
+    status: pending
+    last_verified_at: null
   - id: AC-02
     outcome: OTA 只从可信配置构造下载地址，且设备、绑定码、请求头和令牌不进入日志
     verifier:
@@ -54,8 +56,8 @@ criteria:
       - Doubao TTS applies a request timeout, treats HTTP 403 as non-retryable, retains bounded retry for transient failures and removes generated text, response bodies, file paths and arbitrary exception payloads from TTS failure logs
       - Huoshan dual-stream TTS applies WebSocket open/close bounds and keeps text, session ids, file paths, connection ids, server metadata and arbitrary exception payloads out of logs
       - shared model-key validation no longer echoes an empty, invalid or placeholder credential into provider logs
-    status: pass
-    last_verified_at: 2026-08-15T14:58:20+08:00
+    status: pending
+    last_verified_at: null
   - id: AC-03
     outcome: 本地镜像可构建，并在不连接现有数据库、不占用现有端口的隔离环境启动且通过 HTTP/WebSocket 探测
     verifier:
@@ -70,10 +72,10 @@ criteria:
       - isolated container used network none, no manager URL, no database, no host ports and the exact read-only VAD file mount resolved from the live Compose plus candidate override; HTTP, WebSocket, OTA, provider-contract and authorization-failure resilience checks passed
       - the first live canary exposed a missing VAD mount and rolled back to 0.9.1 in about 30 seconds without restarting manager web/API, MySQL or Redis; the corrected verifier now rejects that topology before deployment
       - final image sha256:7e6b3cfde68a261ea1c070255806d8d8e8f4a78949191b784044d3f1b8559cf9 is live as server 0.9.6 with zero restarts; HTTP, WebSocket, manager base/private configuration and exact read-only VAD mount checks pass while manager web/API, MySQL and Redis retain their original container identities
-    status: pass
-    last_verified_at: 2026-08-15T15:00:17+08:00
+    status: pending
+    last_verified_at: null
   - id: AC-04
-    outcome: 升级方案明确现有 manager 兼容性、模型现状、候选镜像摘要、替换步骤、观察项和一条命令回滚
+    outcome: 升级方案明确官方模型同步、兼容性、候选摘要和回滚，且任务分支已发布到 xyezir fork 并创建 PR
     verifier:
       type: command
       command: cd /home/luban/codebase/aiot/.worktrees/xiaozhi-server-v0.9.6-eval && python3 scripts/verify-upgrade-report.py docs/agent/reports/xiaozhi-server-v0.9.6-upgrade-20260814.md
@@ -82,8 +84,8 @@ criteria:
     owner: agent
     evidence:
       - docs/agent/reports/xiaozhi-server-v0.9.6-upgrade-20260814.md records current Doubao HTTP 403 evidence, credential-rotation boundary, compatibility, staged server/ASR/model rollout, source/base/image provenance and one-command core rollback
-    status: pass
-    last_verified_at: 2026-08-15T14:45:59+08:00
+    status: pending
+    last_verified_at: null
 completion:
   required_status: pass
   allow_not_applicable: true

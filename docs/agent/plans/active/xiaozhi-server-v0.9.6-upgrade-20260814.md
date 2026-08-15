@@ -4,7 +4,7 @@ Acceptance contract: `docs/agent/acceptance/active/xiaozhi-server-v0.9.6-upgrade
 
 ## Goal and boundaries
 
-Build an auditable, rollback-ready v0.9.6 core-server candidate without touching the running service or its database. Preserve the existing OTA trust boundary and sensitive-log redaction. Provider/model changes remain recommendations until their billing and account permissions are explicitly validated.
+Upgrade the accepted v0.9.6 core-server candidate to the official rolling `main` snapshot verified on 2026-08-15, preserve the OTA trust boundary and security/runtime fixes, add current Volcengine API-key compatibility, synchronize official model/provider configuration, and publish an auditable branch and PR to `xyezir/xiaozhi-esp32-server`. Production service/database writes and billable provider calls remain out of scope.
 
 ## Progress
 
@@ -18,6 +18,10 @@ Build an auditable, rollback-ready v0.9.6 core-server candidate without touching
 - [x] Add bounded exponential retry, audio-buffer trimming and credential-safe diagnostics to the v0.9.6 Doubao streaming provider; pass the expanded offline regression suite and reproduce the rebuilt candidate image twice.
 - [x] Re-verify the candidate against the exact live Compose model mounts after the first authorized canary failed closed and rolled back.
 - [x] Redeploy the reproducibly rebuilt candidate after the authorized Huoshan probe exposed a placeholder-key log echo; keep the failed TTS relation rolled back.
+- [x] Verify that `xyezir/main` exactly matches official `main` at task start while the accepted candidate has 18 local commits and lacks 21 upstream commits.
+- [ ] Merge the official latest `main` without rewriting shared history and resolve conflicts while preserving both upstream behavior and local security fixes.
+- [ ] Add explicit current-console `X-Api-Key` support to the Huoshan double-stream provider while keeping legacy AppID/Access Token compatibility.
+- [ ] Synchronize and document official model/provider defaults, run focused and image-level verification, then publish the branch and PR to the fork.
 
 ## Surprises and discoveries
 
@@ -29,6 +33,8 @@ Build an auditable, rollback-ready v0.9.6 core-server candidate without touching
 - The first recorded image ID was not reproducible because nested ignored Python caches still entered the Docker context. Recursive exclusions and embedded source/base provenance now make consecutive builds identical; the superseded image was never deployed.
 - The first authorized core-only canary on 2026-08-15 entered a restart loop because the live Compose file mounted only the legacy SenseVoice path while v0.9.6 also requires `silero_vad.onnx`. The rollback restored 0.9.1 in about 30 seconds without restarting manager web/API, MySQL or Redis. The previous isolated smoke had hidden this mismatch by mounting the entire host `models` directory.
 - The second core canary passed. The separately authorized Huoshan TTS relation then changed exactly one agent and its matching voice, but the one short provider probe revealed that the configured access token was still a placeholder and returned no audio. The relation rolled back immediately. This path also exposed that `check_model_key` echoed its current value into logs, so the candidate must be rebuilt before the core canary is retained.
+- The official latest Release remains v0.9.6, but rolling `main` is 21 commits ahead of the tag. The user's fork already matches that upstream snapshot; the unpublished value is the accepted candidate's 18 security/runtime commits plus the new API-key compatibility.
+- Volcengine now exposes a single API Key in its current speech console, while the existing manager schema and adapter only send legacy `X-Api-App-Key` and `X-Api-Access-Key`. Treating an Ark or speech API Key as a legacy access token cannot work reliably.
 
 ## Decision log
 
@@ -39,6 +45,8 @@ Build an auditable, rollback-ready v0.9.6 core-server candidate without touching
 - 2026-08-15: Rotate any credential that may have appeared in legacy logs only after the redacted provider is deployed, so replacement values cannot be leaked by the same code path.
 - 2026-08-15: Preserve one-variable rollout semantics by adding a read-only, exact-file VAD mount through a candidate-only Compose override. Do not mutate the base production Compose file or mount the whole models tree.
 - 2026-08-15: Treat a placeholder provider token as a failed TTS canary, not a billable success. Redact the value at the shared model-key validation boundary and do not retry another provider without fresh authorization.
+- 2026-08-15: Use a merge commit to bring official `main` into the accepted branch; do not rebase or force-push the audited local history. Publish only to the user's `xyezir` fork.
+- 2026-08-15: Support both current `X-Api-Key` and legacy AppID/Access Token authentication explicitly. Never silently reinterpret a Fireworks/Ark/other-provider key as a speech credential, and never issue a billable provider call during repository validation.
 
 ## Outcomes and retrospective
 
