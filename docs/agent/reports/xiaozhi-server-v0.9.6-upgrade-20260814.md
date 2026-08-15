@@ -2,7 +2,7 @@
 
 ## Current state
 
-- The running core container reports `0.9.6`; the final redaction rebuild below is ready for an in-place core-only replacement of the earlier 0.9.6 canary image.
+- The running core container reports `0.9.6` and uses the final redaction rebuild `sha256:7e6b3cfde68a261ea1c070255806d8d8e8f4a78949191b784044d3f1b8559cf9`.
 - Official stable `v0.9.6` is the candidate baseline. The official rolling `main` has additional unreleased commits, so it is not used as the replacement target.
 - The current custom branch is based on an older upstream revision and conflicts with `v0.9.6` in server, manager and dependency files. The candidate therefore starts at the exact stable tag and ports only the locally required security changes.
 - Candidate image: `xiaozhi-server:0.9.6-candidate-20260814`.
@@ -20,6 +20,7 @@
 - A later read-only aggregate reached fifteen HTTP 403 attempts and three terminal segment failures. Every sanitized provider response carries code `3001` and a resource-class marker. The configured AppID and access token are present, so this evidence points to a resource entitlement or AppID/token/resource mismatch; it does not prove that a generic LLM SK is wrong, and no credential value is retained here.
 - The enabled `HuoshanDoubleStreamTTS` row is distinct from the failing Doubao TTS route, but the manager returns a placeholder access token. The explicitly authorized one-device relation switch and one short probe were attempted only after the core canary passed; the provider rejected the request before any audio arrived, and the model plus voice relation immediately rolled back. No successful billable synthesis or first-audio measurement exists. The final candidate also removes the placeholder value from the shared model-key diagnostic.
 - The first authorized 0.9.6 core canary on 2026-08-15 failed closed: the process entered a restart loop because the live Compose topology did not mount `silero_vad.onnx`. The old core image was restored in about 30 seconds; manager web/API, MySQL and Redis kept the same container IDs and start times. No TTS relation or provider call was attempted after this failed gate.
+- The corrected core canary and the final redaction rebuild both passed live startup. The final container has zero restarts, reports 0.9.6, serves HTTP and WebSocket, loads manager base/private configuration and uses the exact read-only VAD mount. Manager web/API, MySQL and Redis retained their original container IDs and start times.
 
 ## Compatibility boundary
 

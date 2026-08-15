@@ -69,8 +69,9 @@ criteria:
       - generated Python caches are recursively excluded; embedded provenance labels match the committed source, Dockerfile, ignore policy, deployment manifest 14f3d6ea58075fdda90a7402499047e9f365a21b and base image sha256:130bb55b34acabc3d43bf8d1af3d4cf01b53404d04550434992f0b7c486d8a1d
       - isolated container used network none, no manager URL, no database, no host ports and the exact read-only VAD file mount resolved from the live Compose plus candidate override; HTTP, WebSocket, OTA, provider-contract and authorization-failure resilience checks passed
       - the first live canary exposed a missing VAD mount and rolled back to 0.9.1 in about 30 seconds without restarting manager web/API, MySQL or Redis; the corrected verifier now rejects that topology before deployment
+      - final image sha256:7e6b3cfde68a261ea1c070255806d8d8e8f4a78949191b784044d3f1b8559cf9 is live as server 0.9.6 with zero restarts; HTTP, WebSocket, manager base/private configuration and exact read-only VAD mount checks pass while manager web/API, MySQL and Redis retain their original container identities
     status: pass
-    last_verified_at: 2026-08-15T14:58:20+08:00
+    last_verified_at: 2026-08-15T15:00:17+08:00
   - id: AC-04
     outcome: 升级方案明确现有 manager 兼容性、模型现状、候选镜像摘要、替换步骤、观察项和一条命令回滚
     verifier:

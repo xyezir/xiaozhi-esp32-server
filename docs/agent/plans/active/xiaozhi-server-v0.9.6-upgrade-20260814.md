@@ -17,7 +17,7 @@ Build an auditable, rollback-ready v0.9.6 core-server candidate without touching
 - [x] Diagnose the current one-turn-only device failure: the local wake phrase still works, but the selected Doubao streaming ASR handshake returns HTTP 403 before any user utterance can be transcribed.
 - [x] Add bounded exponential retry, audio-buffer trimming and credential-safe diagnostics to the v0.9.6 Doubao streaming provider; pass the expanded offline regression suite and reproduce the rebuilt candidate image twice.
 - [x] Re-verify the candidate against the exact live Compose model mounts after the first authorized canary failed closed and rolled back.
-- [ ] Redeploy the reproducibly rebuilt candidate after the authorized Huoshan probe exposed a placeholder-key log echo; keep the failed TTS relation rolled back.
+- [x] Redeploy the reproducibly rebuilt candidate after the authorized Huoshan probe exposed a placeholder-key log echo; keep the failed TTS relation rolled back.
 
 ## Surprises and discoveries
 
@@ -42,6 +42,6 @@ Build an auditable, rollback-ready v0.9.6 core-server candidate without touching
 
 ## Outcomes and retrospective
 
-The rollback-ready stable candidate is built reproducibly as `sha256:7e6b3cfde68a261ea1c070255806d8d8e8f4a78949191b784044d3f1b8559cf9` from deployment/source revision `b002d42a5cd257facb1b1fda8f07b27406000753`, source tree `9adcf8688967bf9e152a7a7434cd0033120eab0a` and deployment manifest `14f3d6ea58075fdda90a7402499047e9f365a21b`. Twenty-seven offline security/provider tests, exact-topology isolated HTTP/WebSocket/OTA smoke and two consecutive image builds pass. The first production canary exposed and safely rolled back a missing VAD mount; the second core canary passed. The authorized dual-stream TTS canary then exposed a placeholder access token and rolled its model plus voice relation back. The final rebuild redacts that placeholder path and is ready to replace the earlier 0.9.6 canary image.
+The rollback-ready stable candidate is built reproducibly as `sha256:7e6b3cfde68a261ea1c070255806d8d8e8f4a78949191b784044d3f1b8559cf9` from deployment/source revision `b002d42a5cd257facb1b1fda8f07b27406000753`, source tree `9adcf8688967bf9e152a7a7434cd0033120eab0a` and deployment manifest `14f3d6ea58075fdda90a7402499047e9f365a21b`. Twenty-seven offline security/provider tests, exact-topology isolated HTTP/WebSocket/OTA smoke and two consecutive image builds pass. The first production canary exposed and safely rolled back a missing VAD mount; the corrected core canary passed. The authorized dual-stream TTS canary then exposed a placeholder access token and rolled its model plus voice relation back. The final redaction rebuild is deployed with zero restarts and passes HTTP, WebSocket, manager base/private configuration and unchanged companion-container checks.
 
 Quality Delta: Improved deployment-to-test fidelity, immutable deployment provenance, fail-fast model-path validation and shared invalid-key log redaction. Introduced one candidate-only read-only bind mount. Deferred repair of the legacy SenseVoice source path, which is currently a directory and is not used by the selected Qwen ASR. Evidence: two identical candidate builds, exact live Compose resolution, 27 offline tests and isolated protocol smoke.
