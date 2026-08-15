@@ -92,6 +92,31 @@ class HuoshanDoubleStreamTTSSecurityTest(unittest.TestCase):
         self.assertNotIn("private reply", messages)
         self.assertNotIn("secret-access-token", messages)
 
+    def test_placeholder_access_token_is_not_echoed(self):
+        placeholder = "你的火山引擎语音合成服务access_token"
+        bound_logger = Mock()
+
+        with patch(
+            "core.providers.tts.huoshan_double_stream.logger"
+        ) as logger:
+            logger.bind.return_value = bound_logger
+            TTSProvider(
+                {
+                    "appid": "test-app",
+                    "access_token": placeholder,
+                    "resource_id": "test-resource",
+                    "speaker": "test-speaker",
+                    "ws_url": "wss://example.invalid/tts",
+                    "output_dir": self.output_dir.name,
+                },
+                True,
+            )
+
+        message = bound_logger.error.call_args.args[0]
+        self.assertIn("API key 未设置", message)
+        self.assertNotIn(placeholder, message)
+        self.assertNotIn("当前值", message)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -129,8 +129,8 @@ def remove_punctuation_and_length(text):
 
 
 def check_model_key(modelType, modelKey):
-    if "你" in modelKey:
-        return f"配置错误: {modelType} 的 API key 未设置,当前值为: {modelKey}"
+    if not isinstance(modelKey, str) or not modelKey.strip() or "你" in modelKey:
+        return f"配置错误: {modelType} 的 API key 未设置"
     return None
 
 
