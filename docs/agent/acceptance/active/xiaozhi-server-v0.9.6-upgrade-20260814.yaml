@@ -43,14 +43,15 @@ criteria:
     outcome: OTA 只从可信配置构造下载地址，且设备、绑定码、请求头和令牌不进入日志
     verifier:
       type: command
-      command: cd /home/luban/codebase/aiot/.worktrees/xiaozhi-server-v0.9.6-eval && docker run --rm --network none -v "$PWD/main/xiaozhi-server:/opt/xiaozhi-esp32-server" -w /opt/xiaozhi-esp32-server xiaozhi-server:20260813-secure python -m unittest tests.test_ota_handler_security tests.test_sensitive_log_redaction tests.test_network_resource_safety
+      command: cd /home/luban/codebase/aiot/.worktrees/xiaozhi-server-v0.9.6-eval && docker run --rm --network none -v "$PWD/main/xiaozhi-server:/opt/xiaozhi-esp32-server" -v "$PWD/tests/fixtures/isolated-config.yaml:/opt/xiaozhi-esp32-server/data/.config.yaml:ro" -w /opt/xiaozhi-esp32-server --entrypoint python xiaozhi-server:0.9.6-candidate-20260814 -m unittest tests.test_ota_handler_security tests.test_sensitive_log_redaction tests.test_network_resource_safety tests.test_provider_canary_contract tests.test_doubao_stream_resilience
     environment: local
     required: true
     owner: agent
     evidence:
-      - 11 unittest cases passed in an existing dependency image with network disabled; includes OTA origin validation, fail-closed behavior, binding-code and sensitive-log redaction, and socket cleanup
+      - 15 unittest cases passed in the candidate dependency image with network disabled; includes OTA origin validation, fail-closed behavior, binding-code and sensitive-log redaction, socket cleanup, provider configuration contracts and Doubao authorization-failure backoff
+      - the Doubao provider no longer logs headers, initialization request parameters, raw response data or arbitrary exception causes; HTTP 403 diagnostics are reduced to the status code and retries back off from 1 to 30 seconds while the buffered audio remains bounded
     status: pass
-    last_verified_at: 2026-08-14T20:22:00+08:00
+    last_verified_at: 2026-08-15T10:27:46+08:00
   - id: AC-03
     outcome: 本地镜像可构建，并在不连接现有数据库、不占用现有端口的隔离环境启动且通过 HTTP/WebSocket 探测
     verifier:
@@ -60,11 +61,11 @@ criteria:
     required: true
     owner: agent
     evidence:
-      - image xiaozhi-server:0.9.6-candidate-20260814 built twice as sha256:f8d806645cf7815b8c87720cabcbb4b7ec2fce16c7c44e46788cb248c8771297 from source revision 9f880297fbe6c4b2dcb3ef6af4ba105d7eee6bed and tree 37860ca25124b4945ffd48c6ce3a2a0629422814
+      - image xiaozhi-server:0.9.6-candidate-20260814 built twice as sha256:a2d7233c6a8e6b3646bec410e34cb53dfbd4c251218637bb3fd5da054c917cb7 from source revision 0761787db1dbe32a786661bdae382cb90bd69784 and tree 518430602dc8cc1c8e99a61b21874db433bc59af
       - generated Python caches are recursively excluded; embedded provenance labels match the committed source, Dockerfile, ignore policy and base image sha256:130bb55b34acabc3d43bf8d1af3d4cf01b53404d04550434992f0b7c486d8a1d
-      - isolated container used network none, no manager URL, no database and no host ports; HTTP, WebSocket, OTA and two provider contract tests passed
+      - isolated container used network none, no manager URL, no database and no host ports; HTTP, WebSocket, OTA, provider-contract and authorization-failure resilience checks passed
     status: pass
-    last_verified_at: 2026-08-15T00:10:00+08:00
+    last_verified_at: 2026-08-15T10:27:46+08:00
   - id: AC-04
     outcome: 升级方案明确现有 manager 兼容性、模型现状、候选镜像摘要、替换步骤、观察项和一条命令回滚
     verifier:
@@ -74,9 +75,9 @@ criteria:
     required: true
     owner: agent
     evidence:
-      - docs/agent/reports/xiaozhi-server-v0.9.6-upgrade-20260814.md records compatibility, model staging, source/base/image provenance, rollout gates and one-command core rollback
+      - docs/agent/reports/xiaozhi-server-v0.9.6-upgrade-20260814.md records current Doubao HTTP 403 evidence, credential-rotation boundary, compatibility, staged server/ASR/model rollout, source/base/image provenance and one-command core rollback
     status: pass
-    last_verified_at: 2026-08-15T00:10:00+08:00
+    last_verified_at: 2026-08-15T10:27:46+08:00
 completion:
   required_status: pass
   allow_not_applicable: true
