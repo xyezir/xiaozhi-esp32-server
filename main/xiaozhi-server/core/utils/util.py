@@ -19,13 +19,11 @@ TAG = __name__
 
 def get_local_ip():
     try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # Connect to Google's DNS servers
-        s.connect(("8.8.8.8", 80))
-        local_ip = s.getsockname()[0]
-        s.close()
-        return local_ip
-    except Exception as e:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as local_socket:
+            # Connect to Google's DNS servers
+            local_socket.connect(("8.8.8.8", 80))
+            return local_socket.getsockname()[0]
+    except Exception:
         return "127.0.0.1"
 
 
@@ -131,8 +129,8 @@ def remove_punctuation_and_length(text):
 
 
 def check_model_key(modelType, modelKey):
-    if "你" in modelKey:
-        return f"配置错误: {modelType} 的 API key 未设置,当前值为: {modelKey}"
+    if not isinstance(modelKey, str) or not modelKey.strip() or "你" in modelKey:
+        return f"配置错误: {modelType} 的 API key 未设置"
     return None
 
 

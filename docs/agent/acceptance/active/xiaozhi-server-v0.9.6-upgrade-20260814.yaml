@@ -1,0 +1,96 @@
+schema_version: 1
+goal_id: xiaozhi-server-v0.9.6-upgrade-20260814
+goal: 将已验收的 xiaozhi-server v0.9.6 安全候选升级到官方最新 main，补齐新版模型与火山语音 API Key 兼容，并发布到 xyezir fork
+status: passed
+authority:
+  user_mandate: 检查后端是否为最新版，持续推进到验收；2026-08-15 明确要求将 xyezir/xiaozhi-esp32-server 直接升级到官方最新版、同步官方模型配置并发布
+  autonomy_profile: nonprod-auto
+  coordinator_workspace: /home/luban/codebase/aiot/esp32-nezuko
+  writer_workspaces:
+    - /home/luban/codebase/aiot/.worktrees/xiaozhi-server-v0.9.6-eval
+  branches:
+    - codex/xiaozhi-v0.9.6-upgrade-eval
+scope:
+  in:
+    - 以官方稳定版 v0.9.6 和已验收候选为安全基线，合入 2026-08-15 的官方最新 main
+    - 移植当前部署依赖的 OTA 信任边界与敏感日志脱敏
+    - 同步官方模型供应器、模型名称和默认配置，并为火山双流 TTS 同时支持新版 API Key 与旧版 AppID/Access Token
+    - 构建本地候选镜像并在隔离环境完成启动和协议 smoke
+    - 推送任务分支到 xyezir/xiaozhi-esp32-server 并创建可审查的发布 PR
+  out:
+    - 替换当前运行中的生产服务或修改现有生产数据库
+    - 在未验证计费和权限前调用付费模型或 TTS 提供商
+    - 将固件定制代码整体迁移到 ESP-IDF 6
+required_environments:
+  - local
+  - github
+stop_conditions:
+  - 候选需要写入当前生产数据库或覆盖当前运行容器才能继续验证
+  - 发现无法保留的 OTA 安全边界、密钥泄漏风险或不可回滚迁移
+criteria:
+  - id: AC-01
+    outcome: 候选包含 2026-08-15 官方最新 main，且本地安全移植和上游增量可审计
+    verifier:
+      type: command
+      command: cd /home/luban/codebase/aiot/.worktrees/xiaozhi-server-v0.9.6-eval && test "$(git merge-base HEAD origin/main)" = "$(git rev-parse origin/main)" && git diff --check
+    environment: local
+    required: true
+    owner: agent
+    evidence:
+      - official origin/main and fork/main both resolved to 17560a7d295a0a7f3e46add30bb584d486b651c3 at integration time
+      - merge commit 0300a007 includes that exact official main without history rewriting; accepted local hardening remains auditable before the merge
+      - git merge-base confirms origin/main is an ancestor and git diff --check passes
+    status: pass
+    last_verified_at: 2026-08-15T19:36:00+08:00
+  - id: AC-02
+    outcome: OTA 只从可信配置构造下载地址，且设备、绑定码、请求头和令牌不进入日志
+    verifier:
+      type: command
+      command: cd /home/luban/codebase/aiot/.worktrees/xiaozhi-server-v0.9.6-eval && docker run --rm --network none -v "$PWD/main/xiaozhi-server:/opt/xiaozhi-esp32-server" -v "$PWD/tests/fixtures/isolated-config.yaml:/opt/xiaozhi-esp32-server/data/.config.yaml:ro" -w /opt/xiaozhi-esp32-server --entrypoint python xiaozhi-server:0.9.6-candidate-20260814 -m unittest tests.test_huoshan_tts_security tests.test_doubao_tts_resilience tests.test_qwen3_asr_flash tests.test_ota_handler_security tests.test_sensitive_log_redaction tests.test_network_resource_safety tests.test_provider_canary_contract tests.test_doubao_stream_resilience
+    environment: local
+    required: true
+    owner: agent
+    evidence:
+      - 31 unittest cases passed in the candidate dependency image with network disabled; includes OTA origin validation, fail-closed behavior, binding-code and sensitive-log redaction, socket cleanup, provider configuration contracts, Doubao ASR authorization-failure backoff, Qwen ASR event-loop isolation, Doubao TTS permanent-failure handling and dual-stream TTS authentication/redaction
+      - current-console api_key emits only X-Api-Key; legacy AppID/Access Token emits only X-Api-App-Key and X-Api-Access-Key; explicit api_key wins, credentials are normalized and placeholders fail before network
+      - the Doubao provider no longer logs headers, initialization request parameters, raw response data or arbitrary exception causes; HTTP 403 diagnostics are reduced to the status code and retries back off from 1 to 30 seconds while the buffered audio remains bounded
+      - Qwen3-ASR-Flash runs the synchronous DashScope call outside the asyncio event loop, uses a per-call API key and applies both SDK and coroutine request bounds without logging provider payloads or credentials
+      - Doubao TTS applies a request timeout, treats HTTP 403 as non-retryable, retains bounded retry for transient failures and removes generated text, response bodies, file paths and arbitrary exception payloads from TTS failure logs
+      - Huoshan dual-stream TTS applies WebSocket open/close bounds and keeps text, session ids, file paths, connection ids, server metadata and arbitrary exception payloads out of logs
+      - shared model-key validation no longer echoes an empty, invalid or placeholder credential into provider logs
+    status: pass
+    last_verified_at: 2026-08-15T19:36:00+08:00
+  - id: AC-03
+    outcome: 本地镜像可构建，并在不连接现有数据库、不占用现有端口的隔离环境启动且通过 HTTP/WebSocket 探测
+    verifier:
+      type: command
+      command: cd /home/luban/codebase/aiot/.worktrees/xiaozhi-server-v0.9.6-eval && bash scripts/verify-server-upgrade-candidate.sh
+    environment: local
+    required: true
+    owner: agent
+    evidence:
+      - image xiaozhi-server:0.9.6-main-20260815-candidate built twice as sha256:e1e4fb8b6136f7d121863a761d87ab876a456cab8f074610f40cc63c88921645 from build-input revision 40d4fdffdbbc8a27104c1e0ae998f500390206b8 and server tree 04d47042762548a9355fe4646dc47b06c77b55a0
+      - embedded provenance labels match the committed source, Dockerfile, ignore policy, deployment manifest 14f3d6ea58075fdda90a7402499047e9f365a21b and base image sha256:130bb55b34acabc3d43bf8d1af3d4cf01b53404d04550434992f0b7c486d8a1d
+      - isolated container used network none, no manager URL, no database, no host ports and the exact read-only VAD file mount resolved from the live Compose plus candidate override; HTTP, WebSocket and OTA checks passed twice
+      - manager API 127/127 tests passed with the new Liquibase change set against disposable MySQL 9.6 and Redis 8; manager Web 9/9 tests, six-locale validation and production build passed
+      - production containers and database were not changed; the previously deployed 0.9.6 image remains live under the read-only boundary
+    status: pass
+    last_verified_at: 2026-08-15T19:36:00+08:00
+  - id: AC-04
+    outcome: 升级方案明确官方模型同步、兼容性、候选摘要和回滚，且任务分支已发布到 xyezir fork 并创建 PR
+    verifier:
+      type: command
+      command: cd /home/luban/codebase/aiot/.worktrees/xiaozhi-server-v0.9.6-eval && python3 scripts/verify-upgrade-report.py docs/agent/reports/xiaozhi-server-v0.9.6-upgrade-20260814.md
+    environment: local
+    required: true
+    owner: agent
+    evidence:
+      - docs/model-provider-baseline.md records official model names, protocol boundaries and distinct Ark versus speech credentials without changing enabled models
+      - docs/agent/reports/xiaozhi-server-v0.9.6-upgrade-20260814.md records current/legacy authentication, compatibility, source/base/image provenance, verification and rollback
+      - branch codex/xiaozhi-v0.9.6-upgrade-eval is published to xyezir/xiaozhi-esp32-server and pull request https://github.com/xyezir/xiaozhi-esp32-server/pull/1 is open with a clean merge state
+      - the fork defines no required GitHub status checks for this pull request; local verification evidence is recorded in the report and PR body
+    status: pass
+    last_verified_at: 2026-08-15T19:42:00+08:00
+completion:
+  required_status: pass
+  allow_not_applicable: true

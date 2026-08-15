@@ -1,11 +1,10 @@
 import uuid
-import json
 import base64
 import requests
 
 from config.logger import setup_logging
 from core.utils.util import check_model_key
-from core.providers.tts.base import TTSProviderBase
+from core.providers.tts.base import TTSProviderBase, TTSProviderError
 from core.utils.tts import convert_percentage_to_range
 
 
@@ -80,19 +79,37 @@ class TTSProvider(TTSProviderBase):
 
         try:
             resp = requests.post(
-                self.api_url, json.dumps(request_json), headers=self.header
+                self.api_url,
+                json=request_json,
+                headers=self.header,
+                timeout=self.tts_timeout,
             )
-            if "data" in resp.json():
-                data = resp.json()["data"]
-                audio_bytes = base64.b64decode(data)
-                if output_file:
-                    with open(output_file, "wb") as file_to_save:
-                        file_to_save.write(audio_bytes)
-                else:
-                    return audio_bytes
-            else:
-                raise Exception(
-                    f"{__name__} status_code: {resp.status_code} response: {resp.content}"
+            try:
+                response_json = resp.json()
+            except ValueError as exc:
+                raise TTSProviderError(
+                    status_code=resp.status_code,
+                    retryable=resp.status_code >= 500,
+                ) from exc
+
+            data = response_json.get("data")
+            if not data:
+                status_code = resp.status_code
+                retryable = status_code in (408, 429) or status_code >= 500
+                raise TTSProviderError(
+                    status_code=status_code,
+                    retryable=retryable,
                 )
-        except Exception as e:
-            raise Exception(f"{__name__} error: {e}")
+
+            audio_bytes = base64.b64decode(data)
+            if output_file:
+                with open(output_file, "wb") as file_to_save:
+                    file_to_save.write(audio_bytes)
+            else:
+                return audio_bytes
+        except TTSProviderError:
+            raise
+        except requests.RequestException as exc:
+            raise TTSProviderError(retryable=True) from exc
+        except Exception as exc:
+            raise TTSProviderError(retryable=False) from exc

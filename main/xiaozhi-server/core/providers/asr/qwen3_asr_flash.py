@@ -1,6 +1,9 @@
+import asyncio
 import os
-from typing import Optional, Tuple, List
+from typing import List, Optional, Tuple
+
 import dashscope
+
 from config.logger import setup_logging
 from core.providers.asr.base import ASRProviderBase
 from core.providers.asr.dto.dto import InterfaceType
@@ -24,6 +27,9 @@ class ASRProvider(ASRProviderBase):
         self.model_name = config.get("model_name", "qwen3-asr-flash")
         self.output_dir = config.get("output_dir", "./audio_output")
         self.delete_audio_file = delete_audio_file
+        self.request_timeout = float(config.get("request_timeout", 20))
+        if self.request_timeout <= 0:
+            raise ValueError("Qwen3-ASR-Flash request_timeout 必须大于 0")
         
         # ASR选项配置
         self.enable_lid = config.get("enable_lid", True)  # 自动语种检测
@@ -40,11 +46,54 @@ class ASRProvider(ASRProviderBase):
     def requires_file(self) -> bool:
         return True
 
+    def _transcribe_file(self, temp_file_path: str) -> str:
+        """Run the synchronous DashScope request outside the event loop."""
+        messages = [
+            {
+                "role": "user",
+                "content": [{"audio": temp_file_path}],
+            }
+        ]
+
+        if self.context:
+            messages.insert(
+                0,
+                {
+                    "role": "system",
+                    "content": [{"text": self.context}],
+                },
+            )
+
+        asr_options = {
+            "enable_lid": self.enable_lid,
+            "enable_itn": self.enable_itn,
+        }
+        if self.language:
+            asr_options["language"] = self.language
+
+        response = dashscope.MultiModalConversation.call(
+            model=self.model_name,
+            messages=messages,
+            result_format="message",
+            asr_options=asr_options,
+            stream=True,
+            api_key=self.api_key,
+            request_timeout=self.request_timeout,
+        )
+
+        full_text = ""
+        for chunk in response:
+            try:
+                text = chunk["output"]["choices"][0]["message"].content[0]["text"]
+                full_text = text.strip()
+            except (AttributeError, IndexError, KeyError, TypeError):
+                continue
+        return full_text
+
     async def speech_to_text(
         self, opus_data: List[bytes], session_id: str, artifacts=None
     ) -> Tuple[Optional[str], Optional[str]]:
         """将语音数据转换为文本"""
-        temp_file_path = None
         file_path = None
         try:
             if artifacts is None:
@@ -53,59 +102,16 @@ class ASRProvider(ASRProviderBase):
             file_path = artifacts.file_path
             if not temp_file_path:
                 return "", file_path
-            # 构造请求消息
-            messages = [
-                {
-                    "role": "user",
-                    "content": [
-                        {"audio": temp_file_path}
-                    ]
-                }
-            ]
-            
-            # 如果有上下文信息，添加system消息
-            if self.context:
-                messages.insert(0, {
-                    "role": "system", 
-                    "content": [
-                        {"text": self.context}
-                    ]
-                })
-            
-            # 准备ASR选项
-            asr_options = {
-                "enable_lid": self.enable_lid,
-                "enable_itn": self.enable_itn
-            }
-            
-            # 如果指定了语种，添加到选项中
-            if self.language:
-                asr_options["language"] = self.language
-            
-            # 设置API密钥
-            dashscope.api_key = self.api_key
-            
-            # 发送流式请求
-            response = dashscope.MultiModalConversation.call(
-                model=self.model_name,
-                messages=messages,
-                result_format="message",
-                asr_options=asr_options,
-                stream=True
+
+            full_text = await asyncio.wait_for(
+                asyncio.to_thread(self._transcribe_file, temp_file_path),
+                timeout=self.request_timeout,
             )
-            
-            # 处理流式响应
-            full_text = ""
-            for chunk in response:
-                try:
-                    text = chunk["output"]["choices"][0]["message"].content[0]["text"]
-                    # 更新为最新的完整文本
-                    full_text = text.strip()
-                except:
-                    pass
-            
             return full_text, file_path
-                
-        except Exception as e:
-            logger.bind(tag=tag).error(f"语音识别失败: {e}")
+
+        except asyncio.TimeoutError:
+            logger.bind(tag=tag).error("语音识别超时")
+            return "", file_path
+        except Exception as exc:
+            logger.bind(tag=tag).error(f"语音识别失败: {type(exc).__name__}")
             return "", file_path

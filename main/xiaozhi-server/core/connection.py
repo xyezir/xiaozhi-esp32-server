@@ -214,9 +214,8 @@ class ConnectionHandler:
                 self.client_ip = real_ip.split(",")[0].strip()
             else:
                 self.client_ip = ws.remote_address[0]
-            self.logger.bind(tag=TAG).info(
-                f"{self.client_ip} conn - Headers: {self.headers}"
-            )
+            # Request headers may contain device identifiers and bearer tokens.
+            self.logger.bind(tag=TAG).info("WebSocket client connected")
 
             self.device_id = self.headers.get("device-id", None)
 

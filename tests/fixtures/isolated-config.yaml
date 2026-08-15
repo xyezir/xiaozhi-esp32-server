@@ -1,0 +1,33 @@
+server:
+  ip: 127.0.0.1
+  port: 18000
+  http_port: 18003
+  websocket: ws://127.0.0.1:18000/xiaozhi/v1/
+  vision_explain: http://127.0.0.1:18003/mcp/vision/explain
+  ota_public_url: http://127.0.0.1:18003
+  auth_key: isolated-smoke-test-only-key
+  auth:
+    enabled: false
+
+manager-api:
+  url: ""
+  secret: ""
+
+log:
+  log_level: INFO
+  log_dir: tmp
+  log_file: isolated-smoke.log
+
+selected_module:
+  VAD: SileroVAD
+  ASR: FunASR
+  LLM: ChatGLMLLM
+  VLLM: ChatGLMVLLM
+  TTS: EdgeTTS
+  Memory: nomem
+  Intent: nointent
+
+enable_greeting: false
+enable_wakeup_words_response_cache: false
+mcp_endpoint: ""
+
