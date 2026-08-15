@@ -1,7 +1,7 @@
 schema_version: 1
 goal_id: xiaozhi-server-v0.9.6-upgrade-20260814
 goal: 形成可回滚、保留本地安全修复的 xiaozhi-server v0.9.6 升级候选并证明其可安全替换当前 0.9.1 核心服务
-status: in_progress
+status: passed
 authority:
   user_mandate: 检查后端是否为最新版，评估并按推荐升级，同时持续推进到验收
   autonomy_profile: nonprod-auto
@@ -48,13 +48,14 @@ criteria:
     required: true
     owner: agent
     evidence:
-      - 26 unittest cases passed in the candidate dependency image with network disabled; includes OTA origin validation, fail-closed behavior, binding-code and sensitive-log redaction, socket cleanup, provider configuration contracts, Doubao ASR authorization-failure backoff, Qwen ASR event-loop isolation, Doubao TTS permanent-failure handling and dual-stream TTS metadata redaction/connection bounds
+      - 27 unittest cases passed in the candidate dependency image with network disabled; includes OTA origin validation, fail-closed behavior, binding-code and sensitive-log redaction, socket cleanup, provider configuration contracts, Doubao ASR authorization-failure backoff, Qwen ASR event-loop isolation, Doubao TTS permanent-failure handling, dual-stream TTS metadata redaction/connection bounds and placeholder-key redaction
       - the Doubao provider no longer logs headers, initialization request parameters, raw response data or arbitrary exception causes; HTTP 403 diagnostics are reduced to the status code and retries back off from 1 to 30 seconds while the buffered audio remains bounded
       - Qwen3-ASR-Flash runs the synchronous DashScope call outside the asyncio event loop, uses a per-call API key and applies both SDK and coroutine request bounds without logging provider payloads or credentials
       - Doubao TTS applies a request timeout, treats HTTP 403 as non-retryable, retains bounded retry for transient failures and removes generated text, response bodies, file paths and arbitrary exception payloads from TTS failure logs
       - Huoshan dual-stream TTS applies WebSocket open/close bounds and keeps text, session ids, file paths, connection ids, server metadata and arbitrary exception payloads out of logs
-    status: pending
-    last_verified_at: 2026-08-15T14:55:58+08:00
+      - shared model-key validation no longer echoes an empty, invalid or placeholder credential into provider logs
+    status: pass
+    last_verified_at: 2026-08-15T14:58:20+08:00
   - id: AC-03
     outcome: 本地镜像可构建，并在不连接现有数据库、不占用现有端口的隔离环境启动且通过 HTTP/WebSocket 探测
     verifier:
@@ -64,12 +65,12 @@ criteria:
     required: true
     owner: agent
     evidence:
-      - image xiaozhi-server:0.9.6-candidate-20260814 built twice as sha256:e3f5dabd86232f4830d9374fd370f4fa49260e9366ff5430b1b0b1019abfcc43 from deployment/source revision 3be7f4745c0f516756c46c1f0c82d2fcf703fe28 and tree 4314d754246c2e4c6b445b3c917f008b86d0a7c3
+      - image xiaozhi-server:0.9.6-candidate-20260814 built twice as sha256:7e6b3cfde68a261ea1c070255806d8d8e8f4a78949191b784044d3f1b8559cf9 from deployment/source revision b002d42a5cd257facb1b1fda8f07b27406000753 and tree 9adcf8688967bf9e152a7a7434cd0033120eab0a
       - generated Python caches are recursively excluded; embedded provenance labels match the committed source, Dockerfile, ignore policy, deployment manifest 14f3d6ea58075fdda90a7402499047e9f365a21b and base image sha256:130bb55b34acabc3d43bf8d1af3d4cf01b53404d04550434992f0b7c486d8a1d
       - isolated container used network none, no manager URL, no database, no host ports and the exact read-only VAD file mount resolved from the live Compose plus candidate override; HTTP, WebSocket, OTA, provider-contract and authorization-failure resilience checks passed
       - the first live canary exposed a missing VAD mount and rolled back to 0.9.1 in about 30 seconds without restarting manager web/API, MySQL or Redis; the corrected verifier now rejects that topology before deployment
-    status: pending
-    last_verified_at: 2026-08-15T14:55:58+08:00
+    status: pass
+    last_verified_at: 2026-08-15T14:58:20+08:00
   - id: AC-04
     outcome: 升级方案明确现有 manager 兼容性、模型现状、候选镜像摘要、替换步骤、观察项和一条命令回滚
     verifier:

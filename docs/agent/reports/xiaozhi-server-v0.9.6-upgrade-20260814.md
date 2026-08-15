@@ -2,13 +2,13 @@
 
 ## Current state
 
-- The running core container reports `0.9.1` and uses the pinned image `xiaozhi-server:20260813-secure`.
+- The running core container reports `0.9.6`; the final redaction rebuild below is ready for an in-place core-only replacement of the earlier 0.9.6 canary image.
 - Official stable `v0.9.6` is the candidate baseline. The official rolling `main` has additional unreleased commits, so it is not used as the replacement target.
 - The current custom branch is based on an older upstream revision and conflicts with `v0.9.6` in server, manager and dependency files. The candidate therefore starts at the exact stable tag and ports only the locally required security changes.
 - Candidate image: `xiaozhi-server:0.9.6-candidate-20260814`.
-- Candidate image ID: `sha256:e3f5dabd86232f4830d9374fd370f4fa49260e9366ff5430b1b0b1019abfcc43`.
-- Candidate source revision: `3be7f4745c0f516756c46c1f0c82d2fcf703fe28`.
-- Candidate source tree: `4314d754246c2e4c6b445b3c917f008b86d0a7c3`.
+- Candidate image ID: `sha256:7e6b3cfde68a261ea1c070255806d8d8e8f4a78949191b784044d3f1b8559cf9`.
+- Candidate source revision: `b002d42a5cd257facb1b1fda8f07b27406000753`.
+- Candidate source tree: `9adcf8688967bf9e152a7a7434cd0033120eab0a`.
 - Candidate base image ID: `sha256:130bb55b34acabc3d43bf8d1af3d4cf01b53404d04550434992f0b7c486d8a1d`.
 - Candidate deployment manifest: `14f3d6ea58075fdda90a7402499047e9f365a21b`.
 - Two consecutive builds produced the same image ID. The build excludes generated Python caches and verifies source, Dockerfile, ignore-policy, deployment-manifest and base-image provenance labels before smoke testing.
@@ -18,7 +18,7 @@
 - The candidate also moves the synchronous Qwen3-ASR-Flash SDK call off the asyncio event loop, applies a 20-second default SDK/coroutine bound and passes the API key per request instead of mutating DashScope global state. This removes a candidate-only event-loop stall; it has not been deployed to the running 0.9.1 core.
 - The first live connection after the ASR canary produced no ASR error or transcript, but Doubao TTS returned ten HTTP 403 failures: two generated segments were each retried five times. The candidate now treats 403 as permanent, stops after one attempt, adds a request timeout and logs only status/type metadata. This prevents the retry stall and removes reply text/response bodies from logs, but valid TTS entitlement or a separately authorized provider is still required for audible replies.
 - A later read-only aggregate reached fifteen HTTP 403 attempts and three terminal segment failures. Every sanitized provider response carries code `3001` and a resource-class marker. The configured AppID and access token are present, so this evidence points to a resource entitlement or AppID/token/resource mismatch; it does not prove that a generic LLM SK is wrong, and no credential value is retained here.
-- The enabled `HuoshanDoubleStreamTTS` configuration has a credential set distinct from the failing Doubao TTS route and is the lowest-risk configured dual-stream canary candidate. Before any rollout, its v0.9.6 adapter was hardened to bound WebSocket open/close operations and redact text, session/file/connection identifiers, provider metadata and exception payloads. No provider request or billable call was made, so entitlement and real first-audio latency remain unknown.
+- The enabled `HuoshanDoubleStreamTTS` row is distinct from the failing Doubao TTS route, but the manager returns a placeholder access token. The explicitly authorized one-device relation switch and one short probe were attempted only after the core canary passed; the provider rejected the request before any audio arrived, and the model plus voice relation immediately rolled back. No successful billable synthesis or first-audio measurement exists. The final candidate also removes the placeholder value from the shared model-key diagnostic.
 - The first authorized 0.9.6 core canary on 2026-08-15 failed closed: the process entered a restart loop because the live Compose topology did not mount `silero_vad.onnx`. The old core image was restored in about 30 seconds; manager web/API, MySQL and Redis kept the same container IDs and start times. No TTS relation or provider call was attempted after this failed gate.
 
 ## Compatibility boundary
@@ -40,7 +40,7 @@
 
 ## Rollout
 
-This is a proposed test-environment procedure; it has not been run against the current service.
+The core-only procedure has been exercised against the current service with rollback. The same command is used for the final redaction rebuild.
 
 1. Record the running image and container configuration with `docker image inspect xiaozhi-server:20260813-secure` and `docker inspect xiaozhi-esp32-server`.
 2. Keep the existing data volume and legacy model mount unchanged, and add the exact read-only VAD model file through the committed override. Run only the core with `XIAOZHI_SERVER_IMAGE=xiaozhi-server:0.9.6-candidate-20260814 XIAOZHI_VAD_MODEL_PATH=/home/luban/codebase/aiot/xiaozhi-esp32-server/main/xiaozhi-server/models/snakers4_silero-vad/src/silero_vad/data/silero_vad.onnx docker compose -f /home/luban/codebase/aiot/xiaozhi-esp32-server/main/xiaozhi-server/docker-compose_all.yml -f /home/luban/codebase/aiot/.worktrees/xiaozhi-server-v0.9.6-eval/deploy/docker-compose.server-v0.9.6-canary.yml up -d --no-deps xiaozhi-esp32-server`.
