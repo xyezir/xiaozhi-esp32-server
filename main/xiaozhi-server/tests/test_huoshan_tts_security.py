@@ -48,6 +48,86 @@ class HuoshanDoubleStreamTTSSecurityTest(unittest.TestCase):
         self.assertEqual(self.provider.interface_type, InterfaceType.DUAL_STREAM)
         self.assertEqual(connect.await_args.kwargs["open_timeout"], 7)
         self.assertEqual(connect.await_args.kwargs["close_timeout"], 5)
+        headers = connect.await_args.kwargs["additional_headers"]
+        self.assertEqual(headers["X-Api-App-Key"], "test-app")
+        self.assertEqual(headers["X-Api-Access-Key"], "secret-access-token")
+        self.assertNotIn("X-Api-Key", headers)
+
+    def test_current_console_api_key_uses_single_header(self):
+        provider = TTSProvider(
+            {
+                "api_key": "secret-current-console-key",
+                "appid": "你的火山引擎语音合成服务appid",
+                "access_token": "你的火山引擎语音合成服务access_token",
+                "resource_id": "seed-tts-2.0",
+                "speaker": "test-speaker",
+                "ws_url": "wss://example.invalid/tts",
+                "output_dir": self.output_dir.name,
+            },
+            True,
+        )
+
+        headers = provider._build_ws_headers()
+
+        self.assertEqual(headers["X-Api-Key"], "secret-current-console-key")
+        self.assertEqual(headers["X-Api-Resource-Id"], "seed-tts-2.0")
+        self.assertNotIn("X-Api-App-Key", headers)
+        self.assertNotIn("X-Api-Access-Key", headers)
+
+    def test_explicit_api_key_wins_when_both_auth_modes_are_configured(self):
+        provider = TTSProvider(
+            {
+                "api_key": "secret-current-console-key",
+                "appid": "test-app",
+                "access_token": "secret-access-token",
+                "resource_id": "test-resource",
+                "speaker": "test-speaker",
+                "ws_url": "wss://example.invalid/tts",
+                "output_dir": self.output_dir.name,
+            },
+            True,
+        )
+
+        headers = provider._build_ws_headers()
+
+        self.assertEqual(set(headers) & {
+            "X-Api-Key", "X-Api-App-Key", "X-Api-Access-Key"
+        }, {"X-Api-Key"})
+
+    def test_credentials_are_normalized_before_headers_are_built(self):
+        provider = TTSProvider(
+            {
+                "appid": 123456,
+                "access_token": "  secret-access-token  ",
+                "resource_id": "test-resource",
+                "speaker": "test-speaker",
+                "ws_url": "wss://example.invalid/tts",
+                "output_dir": self.output_dir.name,
+            },
+            True,
+        )
+
+        headers = provider._build_ws_headers()
+
+        self.assertEqual(headers["X-Api-App-Key"], "123456")
+        self.assertEqual(headers["X-Api-Access-Key"], "secret-access-token")
+
+    def test_missing_auth_fails_before_network(self):
+        provider = TTSProvider(
+            {
+                "api_key": "你的豆包语音新版控制台API Key",
+                "appid": "你的火山引擎语音合成服务appid",
+                "access_token": "你的火山引擎语音合成服务access_token",
+                "resource_id": "test-resource",
+                "speaker": "test-speaker",
+                "ws_url": "wss://example.invalid/tts",
+                "output_dir": self.output_dir.name,
+            },
+            True,
+        )
+
+        with self.assertRaisesRegex(ValueError, "鉴权未配置"):
+            provider._build_ws_headers()
 
     def test_response_metadata_is_not_logged(self):
         response = Response(Header(message_type=9), Optional(event=51))
@@ -113,7 +193,7 @@ class HuoshanDoubleStreamTTSSecurityTest(unittest.TestCase):
             )
 
         message = bound_logger.error.call_args.args[0]
-        self.assertIn("API key 未设置", message)
+        self.assertIn("需要新版 API Key", message)
         self.assertNotIn(placeholder, message)
         self.assertNotIn("当前值", message)
 

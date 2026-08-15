@@ -143,8 +143,9 @@ class TTSProvider(TTSProviderBase):
         self.ws = None
         self.interface_type = InterfaceType.DUAL_STREAM
         self._monitor_task = None  # 监听任务引用
-        self.appId = config.get("appid")
-        self.access_token = config.get("access_token")
+        self.api_key = self._normalize_credential(config.get("api_key"))
+        self.appId = self._normalize_credential(config.get("appid"))
+        self.access_token = self._normalize_credential(config.get("access_token"))
         self.cluster = config.get("cluster")
         self.resource_id = config.get("resource_id")
         self.resource_type = True if self.resource_id == "seed-tts-2.0" else False
@@ -195,15 +196,46 @@ class TTSProvider(TTSProviderBase):
             ))
 
         self.ws_url = config.get("ws_url")
-        self.authorization = config.get("authorization")
-        self.header = {"Authorization": f"{self.authorization}{self.access_token}"}
         enable_ws_reuse_value = config.get("enable_ws_reuse", True)
         self.enable_ws_reuse = False if str(enable_ws_reuse_value).lower() == 'false' else True
         self.tts_text = ""
 
-        model_key_msg = check_model_key("TTS", self.access_token)
-        if model_key_msg:
-            logger.bind(tag=TAG).error(model_key_msg)
+        self.auth_mode = self._resolve_auth_mode()
+        if self.auth_mode is None:
+            logger.bind(tag=TAG).error(
+                "配置错误: 火山 TTS 需要新版 API Key，或旧版 AppID 与 Access Token"
+            )
+
+    @staticmethod
+    def _normalize_credential(value):
+        if value is None:
+            return None
+        return str(value).strip()
+
+    @staticmethod
+    def _is_configured(value):
+        return check_model_key("TTS", value) is None
+
+    def _resolve_auth_mode(self):
+        if self._is_configured(self.api_key):
+            return "api_key"
+        if self._is_configured(self.appId) and self._is_configured(self.access_token):
+            return "legacy"
+        return None
+
+    def _build_ws_headers(self):
+        headers = {
+            "X-Api-Resource-Id": self.resource_id,
+            "X-Api-Connect-Id": str(uuid.uuid4()),
+        }
+        if self.auth_mode == "api_key":
+            headers["X-Api-Key"] = self.api_key
+        elif self.auth_mode == "legacy":
+            headers["X-Api-App-Key"] = self.appId
+            headers["X-Api-Access-Key"] = self.access_token
+        else:
+            raise ValueError("火山 TTS 鉴权未配置")
+        return headers
 
     async def open_audio_channels(self, conn):
         try:
@@ -234,15 +266,9 @@ class TTSProvider(TTSProviderBase):
             # 建立新连接前取消旧监听任务
             await self._cancel_monitor_task()
 
-            ws_header = {
-                "X-Api-App-Key": self.appId,
-                "X-Api-Access-Key": self.access_token,
-                "X-Api-Resource-Id": self.resource_id,
-                "X-Api-Connect-Id": uuid.uuid4(),
-            }
             self.ws = await websockets.connect(
                 self.ws_url,
-                additional_headers=ws_header,
+                additional_headers=self._build_ws_headers(),
                 max_size=1000000000,
                 open_timeout=self.tts_timeout,
                 close_timeout=min(5, self.tts_timeout),
@@ -781,15 +807,9 @@ class TTSProvider(TTSProviderBase):
 
             async def _generate_audio():
                 # 创建新的WebSocket连接
-                ws_header = {
-                    "X-Api-App-Key": self.appId,
-                    "X-Api-Access-Key": self.access_token,
-                    "X-Api-Resource-Id": self.resource_id,
-                    "X-Api-Connect-Id": uuid.uuid4(),
-                }
                 ws = await websockets.connect(
                     self.ws_url,
-                    additional_headers=ws_header,
+                    additional_headers=self._build_ws_headers(),
                     max_size=1000000000,
                     open_timeout=self.tts_timeout,
                     close_timeout=min(5, self.tts_timeout),

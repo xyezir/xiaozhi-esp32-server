@@ -204,6 +204,8 @@ Websocket接口地址: wss://2662r3426b.vicp.fun/xiaozhi/v1/
 | Intent(意图识别) | function_call(函数调用) | function_call(函数调用) |
 | Memory(记忆功能) | mem_local_short(本地短期记忆） | mem_local_short（本地短期记忆） |
 
+本 fork 额外维护一份按供应商官方文档核验的[模型与鉴权基线](./docs/model-provider-baseline.md)，用于区分稳定模型别名、最新兼容模型、火山方舟密钥和豆包语音密钥。升级不会自动切换已有智能体的付费模型。
+
 如果您关心各组件的耗时，请查阅[小智各组件性能测试报告](https://github.com/xinnan-tech/xiaozhi-performance-research)，可按报告中的测试方法在您的环境中实际测试。
 
 #### 🔧 测试工具

@@ -799,12 +799,14 @@ TTS:
   #火山tts，支持双向流式tts
   HuoshanDoubleStreamTTS:
     type: huoshan_double_stream
-    # 访问 https://console.volcengine.com/speech/service/10007 开通语音合成大模型，购买音色
-    # 在页面底部获取appid和access_token
+    # 新版豆包语音控制台：填写 api_key；旧版控制台：填写 appid 和 access_token。两种鉴权二选一
+    # API Key 必须来自豆包语音控制台，不是火山方舟 LLM API Key
+    # 访问 https://console.volcengine.com/speech/service/10007 开通语音合成大模型并购买音色
     # 资源ID固定为：volc.service_type.10029（大模型语音合成及混音）
     # 如果是机智云，把接口地址换成wss://bytedance.gizwitsapi.com/api/v3/tts/bidirection
     # 机智云不需要天填 appid
     ws_url: wss://openspeech.bytedance.com/api/v3/tts/bidirection
+    api_key: 你的豆包语音新版控制台API Key
     appid: 你的火山引擎语音合成服务appid
     access_token: 你的火山引擎语音合成服务access_token
     resource_id: volc.service_type.10029
@@ -840,12 +842,14 @@ TTS:
   #豆包语音合成模型2.0，支持双向流式tts（基于seed-tts-2.0资源）
   HuoshanDoubleStreamTTSV2:
     type: huoshan_double_stream
-    # 访问 https://console.volcengine.com/speech/service/10035 开通语音合成大模型，购买音色
-    # 在页面底部获取appid和access_token
+    # 新版豆包语音控制台：填写 api_key；旧版控制台：填写 appid 和 access_token。两种鉴权二选一
+    # API Key 必须来自豆包语音控制台，不是火山方舟 LLM API Key
+    # 访问 https://console.volcengine.com/speech/service/10035 开通语音合成大模型并购买音色
     # 资源ID固定为：seed-tts-2.0（豆包语音合成模型2.0）
     # 如果是机智云，把接口地址换成wss://bytedance.gizwitsapi.com/api/v3/tts/bidirection
     # 机智云不需要天填 appid
     ws_url: wss://openspeech.bytedance.com/api/v3/tts/bidirection
+    api_key: 你的豆包语音新版控制台API Key
     appid: 你的火山引擎语音合成服务appid
     access_token: 你的火山引擎语音合成服务access_token
     resource_id: seed-tts-2.0
