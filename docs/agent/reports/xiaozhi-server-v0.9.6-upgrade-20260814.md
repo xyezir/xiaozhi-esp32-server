@@ -4,7 +4,7 @@
 
 - Official stable remains `v0.9.6`. This branch also contains the official rolling `main` snapshot `17560a7d295a0a7f3e46add30bb584d486b651c3`, merged without rewriting the accepted local security history.
 - `xyezir/main` matched official `main` at the start of this delivery. The release branch adds the previously accepted OTA/logging/provider hardening, current Volcengine speech authentication and a verified model/provider baseline.
-- Release branch `codex/xiaozhi-v0.9.6-upgrade-eval` is published to the user's fork with review PR `https://github.com/xyezir/xiaozhi-esp32-server/pull/1`; GitHub reports a clean merge state and no configured status checks.
+- Release branch `codex/xiaozhi-v0.9.6-upgrade-eval` was published to the user's fork; PR `https://github.com/xyezir/xiaozhi-esp32-server/pull/1` merged to `main` as `ad726d5412c8d7e19750897b8f061fb5d0f59ade` with no configured status checks.
 - Candidate image: `xiaozhi-server:0.9.6-main-20260815-candidate`.
 - Candidate image ID: `sha256:e1e4fb8b6136f7d121863a761d87ab876a456cab8f074610f40cc63c88921645`.
 - Candidate source revision: `40d4fdffdbbc8a27104c1e0ae998f500390206b8`.
@@ -13,6 +13,7 @@
 - Candidate deployment manifest: `14f3d6ea58075fdda90a7402499047e9f365a21b`.
 - Two consecutive builds produced the same candidate image ID. Embedded labels bind the image to the committed source tree, Dockerfile, ignore policy, deployment manifest and base image.
 - The isolated smoke used Docker network mode `none`, no manager URL, no database and no published host ports. HTTP, WebSocket, OTA and live-Compose mount-contract probes passed.
+- The combined manager Web/API shadow image is `xiaozhi-web:0.9.6-main-20260815-shadow`, ID `sha256:4e6bb8c3220c0f5d42ce7f0e6293e9fc4b86d7addee0b118a16d906ff92939a1`, bound to committed build-input revision `12e130f47399baf41b614c1a7225e950872ddef7`. It was tested only with disposable MySQL/Redis, internal-only networks and no published host ports.
 - The production core remains the previously deployed `0.9.6` redaction build `sha256:7e6b3cfde68a261ea1c070255806d8d8e8f4a78949191b784044d3f1b8559cf9`; this repository release did not replace it, mutate its database or call a billable provider. `xiaozhi-server:20260813-secure` remains the core rollback image.
 - Historical `0.9.1` findings and canary rollback evidence remain relevant only as provenance: the old route exposed repeated ASR/TTS 403 failures and a missing VAD mount, both of which informed the accepted hardening and topology verifier.
 
@@ -40,11 +41,13 @@
 - Manager API: 127 tests passed against disposable MySQL 9.6 and Redis 8 containers. Liquibase migrated an empty database through the new change set; the disposable containers were removed afterward.
 - Manager Web: 9 unit tests passed; all 6 locale files contain 1,526 keys; the production build completed. Existing large static assets generated only size warnings.
 - Candidate runtime: two identical image builds and two isolated HTTP/WebSocket/OTA smoke runs passed. The resolved live-Compose overlay contains the exact read-only `silero_vad.onnx` mount and does not create the host path implicitly.
+- Full-stack shadow: two independent runs passed the fresh-database Liquibase migration, Web root, manager API documentation route, core HTTP route and authenticated core-to-manager configuration fetch. Each run removed all disposable containers and its network; production core and manager image identities and start times remained unchanged.
+- Shadow readiness: an initial run exposed that MySQL's temporary socket-only initialization server could satisfy a local socket ping before the final TCP listener existed. The verifier now gates on TCP port 3306, so the manager cannot race the database restart.
 - Repository: Python syntax, YAML parsing, Bash syntax, report validation and `git diff --check` passed. No production credential was added to the branch.
 
 ## Rollout
 
-This delivery publishes source and a reviewable PR only. Production remains read-only.
+This delivery publishes source, verification automation and reviewable PRs only. Production remains read-only.
 
 1. Review the branch diff and GitHub checks. Confirm the PR head contains official `main` and the accepted local commits without a force-push.
 2. Rebuild locally with `bash scripts/verify-server-upgrade-candidate.sh`; inspect provenance with `docker image inspect xiaozhi-server:0.9.6-main-20260815-candidate`.

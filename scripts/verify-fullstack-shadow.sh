@@ -56,11 +56,14 @@ if [[ -n "$untracked_inputs" ]]; then
   exit 1
 fi
 
+web_build_revision="$(git -C "$repo_dir" log -1 --format=%H -- "${build_inputs[@]}")"
+test -n "$web_build_revision"
+
 if [[ "${XIAOZHI_SKIP_SHADOW_WEB_BUILD:-0}" != "1" ]]; then
   build_args=(
     --file "$repo_dir/Dockerfile-web"
     --tag "$web_image"
-    --label "org.opencontainers.image.revision=$(git -C "$repo_dir" rev-parse HEAD)"
+    --label "org.opencontainers.image.revision=$web_build_revision"
   )
   if [[ -n "$build_proxy" ]]; then
     build_args+=(
@@ -75,7 +78,9 @@ else
   docker image inspect "$web_image" >/dev/null
 fi
 
-docker network create "$network" >/dev/null
+test "$(docker image inspect "$web_image" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')" = "$web_build_revision"
+
+docker network create --internal "$network" >/dev/null
 
 docker run --detach --rm \
   --name "$db_container" \
@@ -92,7 +97,9 @@ docker run --detach --rm \
   "$redis_image" >/dev/null
 
 for attempt in $(seq 1 60); do
-  if docker exec "$db_container" mysqladmin ping -uroot -p"$db_password" --silent >/dev/null 2>&1 &&
+  # The MySQL image exposes a temporary socket-only server while initializing.
+  # Require the final TCP listener so the manager cannot race that transition.
+  if docker exec "$db_container" mysqladmin ping --protocol=tcp --host=127.0.0.1 --port=3306 -uroot -p"$db_password" --silent >/dev/null 2>&1 &&
     docker exec "$redis_container" redis-cli ping 2>/dev/null | grep -qx PONG; then
     break
   fi
@@ -120,7 +127,8 @@ for attempt in $(seq 1 120); do
     printf 'shadow manager container stopped before readiness\n' >&2
     exit 1
   fi
-  if docker exec "$web_container" wget -q -O /dev/null http://127.0.0.1:8002/; then
+  if docker exec "$web_container" wget -q -O /dev/null http://127.0.0.1:8002/ >/dev/null 2>&1 &&
+    docker exec "$web_container" wget -q -O /dev/null http://127.0.0.1:8002/xiaozhi/doc.html >/dev/null 2>&1; then
     break
   fi
   if [[ "$attempt" == 120 ]]; then
@@ -129,8 +137,6 @@ for attempt in $(seq 1 120); do
   fi
   sleep 1
 done
-
-docker exec "$web_container" wget -q -O /dev/null http://127.0.0.1:8002/xiaozhi/doc.html
 
 migration_count="$(docker exec "$db_container" mysql -N -uroot -p"$db_password" xiaozhi_esp32_server \
   -e "SELECT COUNT(*) FROM DATABASECHANGELOG WHERE ID = '202608151730';" 2>/dev/null)"
@@ -208,6 +214,7 @@ core_image_id="$(docker image inspect "$core_image" --format '{{.Id}}')"
 
 printf 'shadow_web_image=%s\n' "$web_image"
 printf 'shadow_web_image_id=%s\n' "$web_image_id"
+printf 'shadow_web_build_revision=%s\n' "$web_build_revision"
 printf 'shadow_core_image=%s\n' "$core_image"
 printf 'shadow_core_image_id=%s\n' "$core_image_id"
 printf 'host_ports=none\n'

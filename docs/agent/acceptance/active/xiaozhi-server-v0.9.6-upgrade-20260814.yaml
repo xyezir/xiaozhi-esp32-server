@@ -1,7 +1,7 @@
 schema_version: 1
 goal_id: xiaozhi-server-v0.9.6-upgrade-20260814
 goal: 将已验收的 xiaozhi-server v0.9.6 安全候选升级到官方最新 main，补齐新版模型与火山语音 API Key 兼容，并发布到 xyezir fork
-status: in_progress
+status: passed
 authority:
   user_mandate: 检查后端是否为最新版，持续推进到验收；2026-08-15 明确要求将 xyezir/xiaozhi-esp32-server 直接升级到官方最新版、同步官方模型配置并发布
   autonomy_profile: nonprod-auto
@@ -10,6 +10,7 @@ authority:
     - /home/luban/codebase/aiot/.worktrees/xiaozhi-server-v0.9.6-eval
   branches:
     - codex/xiaozhi-v0.9.6-upgrade-eval
+    - codex/xiaozhi-v0.9.6-shadow-acceptance
 scope:
   in:
     - 以官方稳定版 v0.9.6 和已验收候选为安全基线，合入 2026-08-15 的官方最新 main
@@ -88,8 +89,8 @@ criteria:
     evidence:
       - docs/model-provider-baseline.md records official model names, protocol boundaries and distinct Ark versus speech credentials without changing enabled models
       - docs/agent/reports/xiaozhi-server-v0.9.6-upgrade-20260814.md records current/legacy authentication, compatibility, source/base/image provenance, verification and rollback
-      - branch codex/xiaozhi-v0.9.6-upgrade-eval is published to xyezir/xiaozhi-esp32-server and pull request https://github.com/xyezir/xiaozhi-esp32-server/pull/1 is open with a clean merge state
-      - the fork defines no required GitHub status checks for this pull request; local verification evidence is recorded in the report and PR body
+      - branch codex/xiaozhi-v0.9.6-upgrade-eval was published to xyezir/xiaozhi-esp32-server; pull request https://github.com/xyezir/xiaozhi-esp32-server/pull/1 merged to main as ad726d5412c8d7e19750897b8f061fb5d0f59ade
+      - the fork defined no required GitHub status checks for this pull request; local verification evidence is recorded in the report and PR body
     status: pass
     last_verified_at: 2026-08-15T19:42:00+08:00
   - id: AC-05
@@ -100,9 +101,14 @@ criteria:
     environment: local
     required: true
     owner: agent
-    evidence: []
-    status: pending
-    last_verified_at: null
+    evidence:
+      - manager web/API image xiaozhi-web:0.9.6-main-20260815-shadow built from committed-input revision 12e130f47399baf41b614c1a7225e950872ddef7 as sha256:4e6bb8c3220c0f5d42ce7f0e6293e9fc4b86d7addee0b118a16d906ff92939a1; npm ci and Maven batch-mode packaging completed
+      - two final independent shadow runs started disposable MySQL 9.6, Redis 8, manager web/API and core candidate on unique internal-only Docker networks with no published host ports
+      - Liquibase change set 202608151730, Web root, manager API documentation route, core HTTP route and an authenticated ManageApiClient configuration fetch all passed
+      - the readiness gate waits for the final MySQL TCP listener rather than the temporary initialization socket; the first detected race failed closed and removed its containers and network
+      - all shadow containers and networks were removed after each run, and the production core and manager container image identities and start times remained unchanged
+    status: pass
+    last_verified_at: 2026-08-15T20:14:54+08:00
 completion:
   required_status: pass
   allow_not_applicable: true
