@@ -34,6 +34,14 @@ class ListenTextMessageHandler(TextMessageHandler):
             )
         if msg_json["state"] == "start":
             # 设备从播放模式切回录音模式,清除所有音频状态和缓冲区
+            # `start` is the protocol boundary at which microphone audio is
+            # valid again.  Do not keep the wake-response suppression timer
+            # alive here: it would discard the beginning (or all) of the
+            # user's next short utterance after playback finishes.
+            vad_resume_task = getattr(conn, "vad_resume_task", None)
+            if vad_resume_task is not None and not vad_resume_task.done():
+                vad_resume_task.cancel()
+            conn.just_woken_up = False
             conn.reset_audio_states()
         elif msg_json["state"] == "stop":
             # 收到stop但asr未初始化，跳过处理
