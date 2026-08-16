@@ -1,5 +1,6 @@
 services:
   xiaozhi-esp32-server:
+    image: ${XIAOZHI_SERVER_IMAGE:-ghcr.nju.edu.cn/xinnan-tech/xiaozhi-esp32-server:server_latest}
     volumes:
       - type: bind
         source: ${XIAOZHI_VAD_MODEL_PATH:?XIAOZHI_VAD_MODEL_PATH must point to silero_vad.onnx}
@@ -7,3 +8,5 @@ services:
         read_only: true
         bind:
           create_host_path: false
+  xiaozhi-esp32-server-web:
+    image: ${XIAOZHI_WEB_IMAGE:-ghcr.nju.edu.cn/xinnan-tech/xiaozhi-esp32-server:web_latest}
