@@ -1,6 +1,7 @@
 package xiaozhi.modules.device.service.impl;
 
 import java.nio.charset.StandardCharsets;
+import java.net.URI;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
@@ -52,6 +53,8 @@ import xiaozhi.common.user.UserDetail;
 import xiaozhi.common.utils.ConvertUtils;
 import xiaozhi.common.utils.DateUtils;
 import xiaozhi.common.utils.JsonUtils;
+import xiaozhi.modules.agent.dao.AgentDao;
+import xiaozhi.modules.agent.entity.AgentEntity;
 import xiaozhi.modules.device.dao.DeviceDao;
 import xiaozhi.modules.device.dto.DeviceManualAddDTO;
 import xiaozhi.modules.device.dto.DevicePageUserDTO;
@@ -78,6 +81,7 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
     private final RedisUtils redisUtils;
     private final OtaService otaService;
     private final DeviceAddressBookService deviceAddressBookService;
+    private final AgentDao agentDao;
 
     @Async
     public void updateDeviceConnectionInfo(String agentId, String deviceId, String appVersion) {
@@ -266,6 +270,10 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
         }
 
         if (deviceById != null) {
+            DeviceReportRespDTO.Role role = buildRolePackage(deviceById);
+            if (role != null) {
+                response.setRole(role);
+            }
             // 如果设备存在，则异步更新上次连接时间和版本信息
             String appVersion = deviceReport.getApplication() != null ? deviceReport.getApplication().getVersion()
                     : null;
@@ -279,6 +287,53 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
         }
 
         return response;
+    }
+
+    private DeviceReportRespDTO.Role buildRolePackage(DeviceEntity device) {
+        if (device == null || StringUtils.isBlank(device.getAgentId())) {
+            return null;
+        }
+        AgentEntity agent = agentDao.selectById(device.getAgentId());
+        if (agent == null || StringUtils.isAnyBlank(
+                agent.getRoleCode(), agent.getRoleAssetVersion(),
+                agent.getRoleAssetUrl(), agent.getRoleAssetSha256()) ||
+                !agent.getRoleCode().matches("^[a-z0-9][a-z0-9_-]{0,63}$") ||
+                !agent.getRoleAssetVersion().matches("^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$") ||
+                agent.getRoleAssetSize() == null || agent.getRoleAssetSize() <= 0 ||
+                agent.getRoleAssetSize() > 8L * 1024 * 1024 ||
+                !agent.getRoleAssetSha256().matches("(?i)^[0-9a-f]{64}$")) {
+            return null;
+        }
+        if (!("public".equals(agent.getRoleDistribution()) ||
+                "internal-only".equals(agent.getRoleDistribution()))) {
+            log.error("角色分发级别无效: agentId={}", agent.getId());
+            return null;
+        }
+        if ("internal-only".equals(agent.getRoleDistribution()) &&
+                !"true".equalsIgnoreCase(
+                        sysParamsService.getValue("role.internal.enabled", true))) {
+            log.warn("内部角色资源未启用，跳过下发: agentId={}", agent.getId());
+            return null;
+        }
+        try {
+            URI uri = URI.create(agent.getRoleAssetUrl());
+            if (!("https".equalsIgnoreCase(uri.getScheme()) ||
+                    "http".equalsIgnoreCase(uri.getScheme())) ||
+                    StringUtils.isBlank(uri.getHost()) || uri.getUserInfo() != null) {
+                log.error("角色资源地址无效: agentId={}", agent.getId());
+                return null;
+            }
+        } catch (IllegalArgumentException exception) {
+            log.error("角色资源地址无法解析: agentId={}", agent.getId());
+            return null;
+        }
+        DeviceReportRespDTO.Role role = new DeviceReportRespDTO.Role();
+        role.setId(agent.getRoleCode());
+        role.setVersion(agent.getRoleAssetVersion());
+        role.setAssetUrl(agent.getRoleAssetUrl());
+        role.setSha256(agent.getRoleAssetSha256().toLowerCase());
+        role.setSize(agent.getRoleAssetSize());
+        return role;
     }
 
     @Override

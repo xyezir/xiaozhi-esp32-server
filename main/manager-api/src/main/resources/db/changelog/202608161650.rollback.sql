@@ -1,0 +1,19 @@
+ALTER TABLE `ai_agent`
+    DROP COLUMN `role_distribution`,
+    DROP COLUMN `role_asset_size`,
+    DROP COLUMN `role_asset_sha256`,
+    DROP COLUMN `role_asset_url`,
+    DROP COLUMN `role_asset_version`,
+    DROP COLUMN `role_theme_json`,
+    DROP COLUMN `role_avatar_url`,
+    DROP COLUMN `role_code`;
+
+ALTER TABLE `ai_agent_template`
+    DROP COLUMN `role_distribution`,
+    DROP COLUMN `role_asset_size`,
+    DROP COLUMN `role_asset_sha256`,
+    DROP COLUMN `role_asset_url`,
+    DROP COLUMN `role_asset_version`,
+    DROP COLUMN `role_theme_json`,
+    DROP COLUMN `role_avatar_url`,
+    DROP COLUMN `role_code`;
