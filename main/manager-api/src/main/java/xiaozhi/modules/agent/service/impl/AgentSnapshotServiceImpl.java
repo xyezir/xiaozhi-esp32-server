@@ -345,6 +345,16 @@ public class AgentSnapshotServiceImpl extends BaseServiceImpl<AgentSnapshotDao, 
         data.setIntentModelId(agent.getIntentModelId());
         data.setChatHistoryConf(agent.getChatHistoryConf());
         data.setSystemPrompt(agent.getSystemPrompt());
+        data.setRoleCode(agent.getRoleCode());
+        data.setRoleAvatarUrl(agent.getRoleAvatarUrl());
+        data.setRoleThemeJson(agent.getRoleThemeJson());
+        data.setRoleAssetVersion(agent.getRoleAssetVersion());
+        data.setRoleAssetUrl(agent.getRoleAssetUrl());
+        data.setRoleAssetSha256(agent.getRoleAssetSha256());
+        data.setRoleAssetSize(agent.getRoleAssetSize());
+        data.setRoleDistribution(agent.getRoleDistribution());
+        data.setRoleWakeWord(agent.getRoleWakeWord());
+        data.setRoleWakeModel(agent.getRoleWakeModel());
         data.setSummaryMemory(agent.getSummaryMemory());
         data.setLangCode(agent.getLangCode());
         data.setLanguage(agent.getLanguage());

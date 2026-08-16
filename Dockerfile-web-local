@@ -1,0 +1,10 @@
+ARG WEB_RUNTIME_IMAGE=xiaozhi-web:volc-flash-asr-8be55c9b
+FROM ${WEB_RUNTIME_IMAGE}
+
+# This development/test image deliberately reuses the verified runtime layer.
+# Build the two artifacts first with:
+#   npm run build --prefix main/manager-web
+#   mvn -f main/manager-api/pom.xml package
+RUN rm -rf /usr/share/nginx/html/* /app/xiaozhi-esp32-api.jar
+COPY main/manager-web/dist/ /usr/share/nginx/html/
+COPY main/manager-api/target/xiaozhi-esp32-api.jar /app/xiaozhi-esp32-api.jar

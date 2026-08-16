@@ -27,6 +27,16 @@
 
         <result column="chatHistoryConf" property="chatHistoryConf"/>
         <result column="systemPrompt" property="systemPrompt"/>
+        <result column="roleCode" property="roleCode"/>
+        <result column="roleAvatarUrl" property="roleAvatarUrl"/>
+        <result column="roleThemeJson" property="roleThemeJson"/>
+        <result column="roleAssetVersion" property="roleAssetVersion"/>
+        <result column="roleAssetUrl" property="roleAssetUrl"/>
+        <result column="roleAssetSha256" property="roleAssetSha256"/>
+        <result column="roleAssetSize" property="roleAssetSize"/>
+        <result column="roleDistribution" property="roleDistribution"/>
+        <result column="roleWakeWord" property="roleWakeWord"/>
+        <result column="roleWakeModel" property="roleWakeModel"/>
         <result column="summaryMemory" property="summaryMemory"/>
         <result column="langCode" property="langCode"/>
         <result column="language" property="language"/>
@@ -64,6 +74,16 @@
                a.intent_model_id   AS intentModelId,
                a.chat_history_conf AS chatHistoryConf,
                a.system_prompt     AS systemPrompt,
+               a.role_code         AS roleCode,
+               a.role_avatar_url   AS roleAvatarUrl,
+               a.role_theme_json   AS roleThemeJson,
+               a.role_asset_version AS roleAssetVersion,
+               a.role_asset_url    AS roleAssetUrl,
+               a.role_asset_sha256 AS roleAssetSha256,
+               a.role_asset_size   AS roleAssetSize,
+               a.role_distribution AS roleDistribution,
+               a.role_wake_word    AS roleWakeWord,
+               a.role_wake_model   AS roleWakeModel,
                a.summary_memory    AS summaryMemory,
                a.lang_code         AS langCode,
                a.language          AS language,
@@ -108,6 +128,16 @@
             intent_model_id = #{agent.intentModelId,jdbcType=VARCHAR},
             chat_history_conf = #{agent.chatHistoryConf,jdbcType=INTEGER},
             system_prompt = #{agent.systemPrompt,jdbcType=LONGVARCHAR},
+            role_code = #{agent.roleCode,jdbcType=VARCHAR},
+            role_avatar_url = #{agent.roleAvatarUrl,jdbcType=VARCHAR},
+            role_theme_json = #{agent.roleThemeJson,jdbcType=LONGVARCHAR},
+            role_asset_version = #{agent.roleAssetVersion,jdbcType=VARCHAR},
+            role_asset_url = #{agent.roleAssetUrl,jdbcType=VARCHAR},
+            role_asset_sha256 = #{agent.roleAssetSha256,jdbcType=CHAR},
+            role_asset_size = #{agent.roleAssetSize,jdbcType=BIGINT},
+            role_distribution = #{agent.roleDistribution,jdbcType=VARCHAR},
+            role_wake_word = #{agent.roleWakeWord,jdbcType=VARCHAR},
+            role_wake_model = #{agent.roleWakeModel,jdbcType=VARCHAR},
             summary_memory = #{agent.summaryMemory,jdbcType=LONGVARCHAR},
             lang_code = #{agent.langCode,jdbcType=VARCHAR},
             language = #{agent.language,jdbcType=VARCHAR},

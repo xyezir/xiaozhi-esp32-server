@@ -49,6 +49,8 @@ SET role_code = NULL,
     role_asset_sha256 = NULL,
     role_asset_size = NULL,
     role_distribution = 'public',
+    role_wake_word = NULL,
+    role_wake_model = NULL,
     updated_at = NOW()
 WHERE @safe_to_rollback
   AND id = @source_id;

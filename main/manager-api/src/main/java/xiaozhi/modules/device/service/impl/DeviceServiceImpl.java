@@ -55,6 +55,7 @@ import xiaozhi.common.utils.DateUtils;
 import xiaozhi.common.utils.JsonUtils;
 import xiaozhi.modules.agent.dao.AgentDao;
 import xiaozhi.modules.agent.entity.AgentEntity;
+import xiaozhi.modules.agent.support.RoleWakeProfileContract;
 import xiaozhi.modules.device.dao.DeviceDao;
 import xiaozhi.modules.device.dto.DeviceManualAddDTO;
 import xiaozhi.modules.device.dto.DevicePageUserDTO;
@@ -309,6 +310,12 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
             log.error("角色分发级别无效: agentId={}", agent.getId());
             return null;
         }
+        RoleWakeProfileContract.Validation wakeProfile = RoleWakeProfileContract.validate(
+                agent.getRoleWakeWord(), agent.getRoleWakeModel());
+        if (!wakeProfile.valid()) {
+            log.error("角色唤醒配置无效: agentId={}, reason={}", agent.getId(), wakeProfile.error());
+            return null;
+        }
         if ("internal-only".equals(agent.getRoleDistribution()) &&
                 !"true".equalsIgnoreCase(
                         sysParamsService.getValue("role.internal.enabled", true))) {
@@ -333,6 +340,10 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
         role.setAssetUrl(agent.getRoleAssetUrl());
         role.setSha256(agent.getRoleAssetSha256().toLowerCase());
         role.setSize(agent.getRoleAssetSize());
+        if (wakeProfile.configured()) {
+            role.setWakeWord(wakeProfile.wakeWord());
+            role.setWakeModel(wakeProfile.wakeModel());
+        }
         return role;
     }
 

@@ -114,6 +114,8 @@ public class AgentTemplateEntity implements Serializable {
     private String roleAssetSha256;
     private Long roleAssetSize;
     private String roleDistribution;
+    private String roleWakeWord;
+    private String roleWakeModel;
 
     /**
      * 总结记忆

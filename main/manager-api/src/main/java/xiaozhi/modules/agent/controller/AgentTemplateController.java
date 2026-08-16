@@ -31,6 +31,7 @@ import xiaozhi.common.utils.Result;
 import xiaozhi.common.utils.ResultUtils;
 import xiaozhi.modules.agent.entity.AgentTemplateEntity;
 import xiaozhi.modules.agent.service.AgentTemplateService;
+import xiaozhi.modules.agent.support.RoleWakeProfileContract;
 import xiaozhi.modules.agent.vo.AgentTemplateVO;
 
 @Tag(name = "智能体模板管理")
@@ -96,6 +97,10 @@ public class AgentTemplateController {
     @Operation(summary = "创建模板")
     @RequiresPermissions("sys:role:superAdmin")
     public Result<AgentTemplateEntity> createAgentTemplate(@Valid @RequestBody AgentTemplateEntity template) {
+        Result<AgentTemplateEntity> validationError = validateWakeProfile(template);
+        if (validationError != null) {
+            return validationError;
+        }
         // 设置排序值为下一个可用的序号
         template.setSort(agentTemplateService.getNextAvailableSort());
         
@@ -111,12 +116,27 @@ public class AgentTemplateController {
     @Operation(summary = "更新模板")
     @RequiresPermissions("sys:role:superAdmin")
     public Result<AgentTemplateEntity> updateAgentTemplate(@Valid @RequestBody AgentTemplateEntity template) {
+        Result<AgentTemplateEntity> validationError = validateWakeProfile(template);
+        if (validationError != null) {
+            return validationError;
+        }
         boolean updated = agentTemplateService.updateById(template);
         if (updated) {
             return ResultUtils.success(template);
         } else {
             return ResultUtils.error("更新模板失败");
         }
+    }
+
+    private Result<AgentTemplateEntity> validateWakeProfile(AgentTemplateEntity template) {
+        RoleWakeProfileContract.Validation validation = RoleWakeProfileContract.validate(
+                template.getRoleWakeWord(), template.getRoleWakeModel());
+        if (!validation.valid()) {
+            return ResultUtils.error(validation.error());
+        }
+        template.setRoleWakeWord(validation.wakeWord());
+        template.setRoleWakeModel(validation.wakeModel());
+        return null;
     }
     
     @DeleteMapping("/{id}")
