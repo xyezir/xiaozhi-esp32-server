@@ -83,6 +83,15 @@ public class ConfigServiceImpl implements ConfigService {
         if (agent == null) {
             throw new RenException(ErrorCode.AGENT_TEMPLATE_NOT_FOUND);
         }
+        if (StringUtils.isNotBlank(agent.getRoleCode())) {
+            Map<String, Object> role = new HashMap<>();
+            role.put("id", agent.getRoleCode());
+            role.put("version", agent.getRoleAssetVersion());
+            role.put("avatar_url", agent.getRoleAvatarUrl());
+            role.put("theme", agent.getRoleThemeJson());
+            role.put("distribution", agent.getRoleDistribution());
+            result.put("role", role);
+        }
 
         // 构建模块配置
         buildModuleConfig(
@@ -167,6 +176,15 @@ public class ConfigServiceImpl implements ConfigService {
         }
         // 构建返回数据
         Map<String, Object> result = new HashMap<>();
+        if (StringUtils.isNotBlank(agent.getRoleCode())) {
+            Map<String, Object> role = new HashMap<>();
+            role.put("id", agent.getRoleCode());
+            role.put("version", agent.getRoleAssetVersion());
+            role.put("avatar_url", agent.getRoleAvatarUrl());
+            role.put("theme", agent.getRoleThemeJson());
+            role.put("distribution", agent.getRoleDistribution());
+            result.put("role", role);
+        }
         // 获取单台设备每天最多输出字数
         String deviceMaxOutputSize = sysParamsService.getValue("device_max_output_size", true);
         result.put("device_max_output_size", deviceMaxOutputSize);

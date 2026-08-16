@@ -267,6 +267,14 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         dto.setId(agent.getId());
         dto.setAgentName(agent.getAgentName());
         dto.setSystemPrompt(agent.getSystemPrompt());
+        dto.setRoleCode(agent.getRoleCode());
+        dto.setRoleAvatarUrl(agent.getRoleAvatarUrl());
+        dto.setRoleThemeJson(agent.getRoleThemeJson());
+        dto.setRoleAssetVersion(agent.getRoleAssetVersion());
+        dto.setRoleAssetUrl(agent.getRoleAssetUrl());
+        dto.setRoleAssetSha256(agent.getRoleAssetSha256());
+        dto.setRoleAssetSize(agent.getRoleAssetSize());
+        dto.setRoleDistribution(agent.getRoleDistribution());
 
         // 获取 TTS 模型名称
         dto.setTtsModelName(modelConfigService.getModelNameById(agent.getTtsModelId()));
@@ -428,6 +436,30 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         }
         if (dto.getSystemPrompt() != null) {
             existingEntity.setSystemPrompt(dto.getSystemPrompt());
+        }
+        if (dto.getRoleCode() != null) {
+            existingEntity.setRoleCode(dto.getRoleCode());
+        }
+        if (dto.getRoleAvatarUrl() != null) {
+            existingEntity.setRoleAvatarUrl(dto.getRoleAvatarUrl());
+        }
+        if (dto.getRoleThemeJson() != null) {
+            existingEntity.setRoleThemeJson(dto.getRoleThemeJson());
+        }
+        if (dto.getRoleAssetVersion() != null) {
+            existingEntity.setRoleAssetVersion(dto.getRoleAssetVersion());
+        }
+        if (dto.getRoleAssetUrl() != null) {
+            existingEntity.setRoleAssetUrl(dto.getRoleAssetUrl());
+        }
+        if (dto.getRoleAssetSha256() != null) {
+            existingEntity.setRoleAssetSha256(dto.getRoleAssetSha256());
+        }
+        if (dto.getRoleAssetSize() != null) {
+            existingEntity.setRoleAssetSize(dto.getRoleAssetSize());
+        }
+        if (dto.getRoleDistribution() != null) {
+            existingEntity.setRoleDistribution(dto.getRoleDistribution());
         }
         if (dto.getSummaryMemory() != null) {
             existingEntity.setSummaryMemory(dto.getSummaryMemory());
@@ -625,6 +657,14 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
             entity.setIntentModelId(template.getIntentModelId());
             entity.setSystemPrompt(template.getSystemPrompt());
             entity.setSummaryMemory(template.getSummaryMemory());
+            entity.setRoleCode(template.getRoleCode());
+            entity.setRoleAvatarUrl(template.getRoleAvatarUrl());
+            entity.setRoleThemeJson(template.getRoleThemeJson());
+            entity.setRoleAssetVersion(template.getRoleAssetVersion());
+            entity.setRoleAssetUrl(template.getRoleAssetUrl());
+            entity.setRoleAssetSha256(template.getRoleAssetSha256());
+            entity.setRoleAssetSize(template.getRoleAssetSize());
+            entity.setRoleDistribution(template.getRoleDistribution());
             if (Constant.MEMORY_NO_MEM.equals(entity.getMemModelId())
                     || Constant.MEMORY_MEM_REPORT_ONLY.equals(entity.getMemModelId())) {
                 entity.setSummaryMemory("");

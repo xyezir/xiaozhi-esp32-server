@@ -73,6 +73,30 @@ public class AgentEntity {
     @Schema(description = "角色设定参数")
     private String systemPrompt;
 
+    @Schema(description = "设备角色稳定标识")
+    private String roleCode;
+
+    @Schema(description = "角色预览图")
+    private String roleAvatarUrl;
+
+    @Schema(description = "角色主题JSON")
+    private String roleThemeJson;
+
+    @Schema(description = "角色资源版本")
+    private String roleAssetVersion;
+
+    @Schema(description = "角色资源下载地址")
+    private String roleAssetUrl;
+
+    @Schema(description = "角色资源SHA-256")
+    private String roleAssetSha256;
+
+    @Schema(description = "角色资源字节数")
+    private Long roleAssetSize;
+
+    @Schema(description = "角色分发级别")
+    private String roleDistribution;
+
     @Schema(description = "总结记忆", example = "构建可生长的动态记忆网络，在有限空间内保留关键信息的同时，智能维护信息演变轨迹\n" +
             "根据对话记录，总结user的重要信息，以便在未来的对话中提供更个性化的服务", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private String summaryMemory;

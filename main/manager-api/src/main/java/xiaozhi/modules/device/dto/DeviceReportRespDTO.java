@@ -1,5 +1,7 @@
 package xiaozhi.modules.device.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.Getter;
@@ -26,6 +28,9 @@ public class DeviceReportRespDTO {
     @Schema(description = "MQTT Gateway配置")
     private MQTT mqtt;
 
+    @Schema(description = "设备当前角色资源")
+    private Role role;
+
     @Getter
     @Setter
     public static class Firmware {
@@ -33,6 +38,22 @@ public class DeviceReportRespDTO {
         private String version;
         @Schema(description = "下载地址")
         private String url;
+    }
+
+    @Getter
+    @Setter
+    public static class Role {
+        @Schema(description = "角色稳定标识")
+        private String id;
+        @Schema(description = "角色资源版本")
+        private String version;
+        @JsonProperty("asset_url")
+        @Schema(description = "完整角色资源包下载地址")
+        private String assetUrl;
+        @Schema(description = "完整资源包SHA-256")
+        private String sha256;
+        @Schema(description = "完整资源包字节数")
+        private Long size;
     }
 
     public static DeviceReportRespDTO createError(String message) {
