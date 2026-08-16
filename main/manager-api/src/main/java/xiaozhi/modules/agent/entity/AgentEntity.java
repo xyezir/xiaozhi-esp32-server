@@ -97,6 +97,12 @@ public class AgentEntity {
     @Schema(description = "角色分发级别")
     private String roleDistribution;
 
+    @Schema(description = "角色实际唤醒短语；必须与 WakeNet 模型同时配置")
+    private String roleWakeWord;
+
+    @Schema(description = "角色实际 WakeNet 模型标识；必须与唤醒短语同时配置")
+    private String roleWakeModel;
+
     @Schema(description = "总结记忆", example = "构建可生长的动态记忆网络，在有限空间内保留关键信息的同时，智能维护信息演变轨迹\n" +
             "根据对话记录，总结user的重要信息，以便在未来的对话中提供更个性化的服务", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private String summaryMemory;

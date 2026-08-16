@@ -28,6 +28,16 @@ public class AgentSnapshotDataDTO implements Serializable {
     private String intentModelId;
     private Integer chatHistoryConf;
     private String systemPrompt;
+    private String roleCode;
+    private String roleAvatarUrl;
+    private String roleThemeJson;
+    private String roleAssetVersion;
+    private String roleAssetUrl;
+    private String roleAssetSha256;
+    private Long roleAssetSize;
+    private String roleDistribution;
+    private String roleWakeWord;
+    private String roleWakeModel;
     private String summaryMemory;
     private String langCode;
     private String language;

@@ -54,6 +54,12 @@ public class DeviceReportRespDTO {
         private String sha256;
         @Schema(description = "完整资源包字节数")
         private Long size;
+        @JsonProperty("wake_word")
+        @Schema(description = "资源包内实际启用的唤醒短语")
+        private String wakeWord;
+        @JsonProperty("wake_model")
+        @Schema(description = "资源包内实际 WakeNet 模型标识")
+        private String wakeModel;
     }
 
     public static DeviceReportRespDTO createError(String message) {

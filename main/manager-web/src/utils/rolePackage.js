@@ -4,6 +4,8 @@ export function validateRolePackage(role) {
     role.roleAssetVersion,
     role.roleAssetUrl,
     role.roleAssetSha256,
+    role.roleWakeWord,
+    role.roleWakeModel,
   ].some((value) => typeof value === "string" && value.trim()) || Number(role.roleAssetSize) > 0;
 
   if (!configured) {
@@ -24,6 +26,19 @@ export function validateRolePackage(role) {
   }
   if (!["public", "internal-only"].includes(role.roleDistribution)) {
     return "角色分发级别无效";
+  }
+  const wakeWord = (role.roleWakeWord || "").trim();
+  const wakeModel = (role.roleWakeModel || "").trim();
+  if (Boolean(wakeWord) !== Boolean(wakeModel)) {
+    return "唤醒短语和 WakeNet 模型必须同时配置或同时清空";
+  }
+  if (wakeWord) {
+    if ([...wakeWord].length > 32 || /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/u.test(wakeWord)) {
+      return "唤醒短语最长 32 个字符，且不能包含控制字符";
+    }
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/.test(wakeModel)) {
+      return "WakeNet 模型标识只能使用字母、数字、点、下划线和短横线，且最长 96 位";
+    }
   }
   try {
     const url = new URL(role.roleAssetUrl);

@@ -49,6 +49,7 @@ import xiaozhi.modules.agent.service.AgentService;
 import xiaozhi.modules.agent.service.AgentSnapshotService;
 import xiaozhi.modules.agent.service.AgentTagService;
 import xiaozhi.modules.agent.service.AgentTemplateService;
+import xiaozhi.modules.agent.support.RoleWakeProfileContract;
 import xiaozhi.modules.agent.vo.AgentInfoVO;
 import xiaozhi.modules.correctword.service.CorrectWordFileService;
 import xiaozhi.modules.device.entity.DeviceEntity;
@@ -180,6 +181,14 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
 
     @Override
     public boolean insert(AgentEntity entity) {
+        RoleWakeProfileContract.Validation wakeProfile = RoleWakeProfileContract.validate(
+                entity.getRoleWakeWord(), entity.getRoleWakeModel());
+        if (!wakeProfile.valid()) {
+            throw new RenException(wakeProfile.error());
+        }
+        entity.setRoleWakeWord(wakeProfile.wakeWord());
+        entity.setRoleWakeModel(wakeProfile.wakeModel());
+
         // 如果ID为空，自动生成一个UUID作为ID
         if (entity.getId() == null || entity.getId().trim().isEmpty()) {
             entity.setId(UUID.randomUUID().toString().replace("-", ""));
@@ -275,6 +284,8 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         dto.setRoleAssetSha256(agent.getRoleAssetSha256());
         dto.setRoleAssetSize(agent.getRoleAssetSize());
         dto.setRoleDistribution(agent.getRoleDistribution());
+        dto.setRoleWakeWord(agent.getRoleWakeWord());
+        dto.setRoleWakeModel(agent.getRoleWakeModel());
 
         // 获取 TTS 模型名称
         dto.setTtsModelName(modelConfigService.getModelNameById(agent.getTtsModelId()));
@@ -461,6 +472,15 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         if (dto.getRoleDistribution() != null) {
             existingEntity.setRoleDistribution(dto.getRoleDistribution());
         }
+        if (dto.getRoleWakeWord() != null || dto.getRoleWakeModel() != null) {
+            RoleWakeProfileContract.Validation updateWakeProfile =
+                    RoleWakeProfileContract.validateAtomicUpdate(dto.getRoleWakeWord(), dto.getRoleWakeModel());
+            if (!updateWakeProfile.valid()) {
+                throw new RenException(updateWakeProfile.error());
+            }
+            existingEntity.setRoleWakeWord(updateWakeProfile.wakeWord());
+            existingEntity.setRoleWakeModel(updateWakeProfile.wakeModel());
+        }
         if (dto.getSummaryMemory() != null) {
             existingEntity.setSummaryMemory(dto.getSummaryMemory());
         }
@@ -569,6 +589,11 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         if (!b) {
             throw new RenException(ErrorCode.LLM_INTENT_PARAMS_MISMATCH);
         }
+        RoleWakeProfileContract.Validation wakeProfile = RoleWakeProfileContract.validate(
+                existingEntity.getRoleWakeWord(), existingEntity.getRoleWakeModel());
+        if (!wakeProfile.valid()) {
+            throw new RenException(wakeProfile.error());
+        }
         this.updateById(existingEntity);
         if (createSnapshot) {
             agentSnapshotService.createSnapshot(agentId, "config");
@@ -665,6 +690,8 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
             entity.setRoleAssetSha256(template.getRoleAssetSha256());
             entity.setRoleAssetSize(template.getRoleAssetSize());
             entity.setRoleDistribution(template.getRoleDistribution());
+            entity.setRoleWakeWord(template.getRoleWakeWord());
+            entity.setRoleWakeModel(template.getRoleWakeModel());
             if (Constant.MEMORY_NO_MEM.equals(entity.getMemModelId())
                     || Constant.MEMORY_MEM_REPORT_ONLY.equals(entity.getMemModelId())) {
                 entity.setSummaryMemory("");

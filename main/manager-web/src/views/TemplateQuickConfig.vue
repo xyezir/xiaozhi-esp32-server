@@ -74,6 +74,12 @@
                 <el-form-item label="包字节数" prop="roleAssetSize">
                   <el-input-number v-model="form.roleAssetSize" :min="0" :max="8388608" :controls="false" />
                 </el-form-item>
+                <el-form-item label="实际唤醒词" prop="roleWakeWord">
+                  <el-input v-model="form.roleWakeWord" placeholder="你好小智" maxlength="32" />
+                </el-form-item>
+                <el-form-item label="WakeNet模型" prop="roleWakeModel">
+                  <el-input v-model="form.roleWakeModel" placeholder="wn9_nihaoxiaozhi_tts" maxlength="96" />
+                </el-form-item>
                 <el-form-item label="主题JSON" prop="roleThemeJson" class="role-package-wide">
                   <el-input v-model="form.roleThemeJson" type="textarea" :rows="2" placeholder='{"accent":"#4CCC70"}' />
                 </el-form-item>
@@ -123,6 +129,8 @@ export default {
         roleAssetSha256: "",
         roleAssetSize: 0,
         roleDistribution: "public",
+        roleWakeWord: "",
+        roleWakeModel: "",
         sort: 0,
         model: { ...DEFAULT_MODEL_CONFIG }
       },
@@ -167,6 +175,8 @@ export default {
         roleAssetSha256: this.form.roleAssetSha256,
         roleAssetSize: this.form.roleAssetSize,
         roleDistribution: this.form.roleDistribution,
+        roleWakeWord: this.form.roleWakeWord,
+        roleWakeModel: this.form.roleWakeModel,
         sort: this.form.sort,
         functions: [],
         // 包含必要的模型字段以确保API调用成功
@@ -260,6 +270,8 @@ export default {
         roleAssetSha256: templateData.roleAssetSha256 || "",
         roleAssetSize: templateData.roleAssetSize || 0,
         roleDistribution: templateData.roleDistribution || "public",
+        roleWakeWord: templateData.roleWakeWord || "",
+        roleWakeModel: templateData.roleWakeModel || "",
         sort: templateData.sort || this.form.sort,
         model: {
           ttsModelId: templateData.ttsModelId || this.form.model.ttsModelId,
@@ -288,6 +300,8 @@ export default {
         roleAssetSha256: '',
         roleAssetSize: 0,
         roleDistribution: 'public',
+        roleWakeWord: '',
+        roleWakeModel: '',
         sort: 1
       };
       

@@ -43,6 +43,8 @@ class DeviceRolePackageTest {
         assertEquals("cheese_cat", role.getId());
         assertEquals("2026.08.16.1", role.getVersion());
         assertEquals(3_456_789L, role.getSize());
+        assertEquals("你好小智", role.getWakeWord());
+        assertEquals("wn9_nihaoxiaozhi_tts", role.getWakeModel());
     }
 
     @Test
@@ -86,6 +88,32 @@ class DeviceRolePackageTest {
         assertNotNull(buildRolePackage());
     }
 
+    @Test
+    void halfConfiguredWakeProfileFailsClosed() {
+        AgentEntity agent = validRoleAgent();
+        agent.setRoleWakeModel(null);
+        when(agentDao.selectById("agent-1")).thenReturn(agent);
+        assertNull(buildRolePackage());
+
+        agent = validRoleAgent();
+        agent.setRoleWakeWord(null);
+        when(agentDao.selectById("agent-1")).thenReturn(agent);
+        assertNull(buildRolePackage());
+    }
+
+    @Test
+    void legacyPackageWithoutWakeProfileRemainsAvailable() {
+        AgentEntity agent = validRoleAgent();
+        agent.setRoleWakeWord(null);
+        agent.setRoleWakeModel(null);
+        when(agentDao.selectById("agent-1")).thenReturn(agent);
+
+        DeviceReportRespDTO.Role role = buildRolePackage();
+        assertNotNull(role);
+        assertNull(role.getWakeWord());
+        assertNull(role.getWakeModel());
+    }
+
     private DeviceReportRespDTO.Role buildRolePackage() {
         return ReflectionTestUtils.invokeMethod(service, "buildRolePackage", device);
     }
@@ -99,6 +127,8 @@ class DeviceRolePackageTest {
         agent.setRoleAssetSha256("a".repeat(64));
         agent.setRoleAssetSize(3_456_789L);
         agent.setRoleDistribution("public");
+        agent.setRoleWakeWord("你好小智");
+        agent.setRoleWakeModel("wn9_nihaoxiaozhi_tts");
         return agent;
     }
 }

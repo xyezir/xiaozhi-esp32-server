@@ -23,6 +23,10 @@ dist/
 **/dist/
 target/
 **/target/
+!main/manager-web/dist/
+!main/manager-web/dist/**
+!main/manager-api/target/
+!main/manager-api/target/xiaozhi-esp32-api.jar
 .webpack_cache/
 **/.webpack_cache/
 unpackage/

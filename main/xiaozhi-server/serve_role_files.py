@@ -7,6 +7,21 @@ from urllib.parse import urlsplit
 PUBLIC_CACHE = "public, max-age=31536000, immutable"
 FILE_SETS = {
     "public-assets": {
+        "/pet_expert_shilang-2026.08.16.2.bin": (
+            Path("/roles/pet_expert_shilang-2026.08.16.2.bin"),
+            "application/octet-stream",
+            PUBLIC_CACHE,
+        ),
+        "/cheese_cat-2026.08.16.2.bin": (
+            Path("/roles/cheese_cat-2026.08.16.2.bin"),
+            "application/octet-stream",
+            PUBLIC_CACHE,
+        ),
+        "/beta_dog-2026.08.16.2.bin": (
+            Path("/roles/beta_dog-2026.08.16.2.bin"),
+            "application/octet-stream",
+            PUBLIC_CACHE,
+        ),
         "/pet_expert_shilang-2026.08.16.1.bin": (
             Path("/roles/pet_expert_shilang-2026.08.16.1.bin"),
             "application/octet-stream",
@@ -41,6 +56,11 @@ FILE_SETS = {
         ),
     },
     "internal": {
+        "/nezuko_proto-2026.08.16.2.bin": (
+            Path("/roles/nezuko_proto-2026.08.16.2.bin"),
+            "application/octet-stream",
+            "no-store",
+        ),
         "/nezuko_proto-2026.08.16.1.bin": (
             Path("/roles/nezuko_proto-2026.08.16.1.bin"),
             "application/octet-stream",

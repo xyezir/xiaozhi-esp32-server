@@ -88,6 +88,10 @@ public class AgentUpdateDTO implements Serializable {
     private Long roleAssetSize;
     @Schema(description = "角色分发级别", nullable = true)
     private String roleDistribution;
+    @Schema(description = "角色实际唤醒短语；与 WakeNet 模型原子提交", nullable = true)
+    private String roleWakeWord;
+    @Schema(description = "角色实际 WakeNet 模型标识；与唤醒短语原子提交", nullable = true)
+    private String roleWakeModel;
 
     @Schema(description = "总结记忆", example = "构建可生长的动态记忆网络，在有限空间内保留关键信息的同时，智能维护信息演变轨迹\n"
             + "根据对话记录，总结user的重要信息，以便在未来的对话中提供更个性化的服务", nullable = true)

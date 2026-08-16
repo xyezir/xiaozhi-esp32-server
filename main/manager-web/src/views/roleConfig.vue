@@ -106,6 +106,8 @@
                       <div>
                         <strong>{{ form.roleCode }}</strong>
                         <span>资源 {{ form.roleAssetVersion || '未配置' }}</span>
+                        <span>当前实际唤醒词：{{ form.roleWakeWord || '你好小智（兼容回退）' }}</span>
+                        <span v-if="form.roleWakeModel">WakeNet：{{ form.roleWakeModel }}</span>
                         <span>保存后设备将在下次配置检查时安全切换</span>
                       </div>
                     </div>
@@ -538,6 +540,8 @@ export default {
         roleAssetSha256: "",
         roleAssetSize: 0,
         roleDistribution: "public",
+        roleWakeWord: "",
+        roleWakeModel: "",
         summaryMemory: "",
         langCode: "",
         language: "",
@@ -672,6 +676,8 @@ export default {
         roleAssetSha256: this.form.roleAssetSha256,
         roleAssetSize: this.form.roleAssetSize,
         roleDistribution: this.form.roleDistribution,
+        roleWakeWord: this.form.roleWakeWord,
+        roleWakeModel: this.form.roleWakeModel,
         summaryMemory: this.form.summaryMemory,
         langCode: this.form.langCode,
         language: this.form.language,
@@ -847,6 +853,8 @@ export default {
             roleAssetSha256: "",
             roleAssetSize: 0,
             roleDistribution: "public",
+            roleWakeWord: "",
+            roleWakeModel: "",
             summaryMemory: "",
             langCode: "",
             language: "",
@@ -917,6 +925,8 @@ export default {
         roleAssetSha256: templateData.roleAssetSha256 || "",
         roleAssetSize: templateData.roleAssetSize || 0,
         roleDistribution: templateData.roleDistribution || "public",
+        roleWakeWord: templateData.roleWakeWord || "",
+        roleWakeModel: templateData.roleWakeModel || "",
         summaryMemory: templateData.summaryMemory || this.form.summaryMemory,
         langCode: templateData.langCode || this.form.langCode,
         model: {
