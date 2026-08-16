@@ -1,6 +1,8 @@
 package xiaozhi.modules.device;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.any;
@@ -173,5 +175,80 @@ class DeviceServiceSecurityTest {
         assertEquals("http://xiaozhi.server.com:8002/xiaozhi/otaMag/download/NOT_ACTIVATED_FIRMWARE_THIS_IS_A_INVALID_URL",
                 firmware.getUrl());
         verifyNoInteractions(redisUtils);
+    }
+
+    @Test
+    void rolePackageRequiresCompleteIntegrityMetadata() {
+        DeviceEntity device = new DeviceEntity();
+        device.setAgentId("agent-1");
+        AgentEntity agent = validRoleAgent();
+        when(agentDao.selectById("agent-1")).thenReturn(agent);
+
+        DeviceReportRespDTO.Role role = ReflectionTestUtils.invokeMethod(
+                service, "buildRolePackage", device);
+
+        assertNotNull(role);
+        assertEquals("cheese_cat", role.getId());
+        assertEquals(3456789L, role.getSize());
+
+        agent.setRoleAssetSha256("invalid");
+        assertNull(ReflectionTestUtils.invokeMethod(service, "buildRolePackage", device));
+    }
+
+    @Test
+    void internalRolePackageIsFailClosedByDefault() {
+        DeviceEntity device = new DeviceEntity();
+        device.setAgentId("agent-1");
+        AgentEntity agent = validRoleAgent();
+        agent.setRoleDistribution("internal-only");
+        when(agentDao.selectById("agent-1")).thenReturn(agent);
+        when(sysParamsService.getValue("role.internal.enabled", true)).thenReturn(null);
+
+        assertNull(ReflectionTestUtils.invokeMethod(service, "buildRolePackage", device));
+    }
+
+    @Test
+    void rolePackageRejectsUntrustedUrlAndUnknownDistribution() {
+        DeviceEntity device = new DeviceEntity();
+        device.setAgentId("agent-1");
+        AgentEntity agent = validRoleAgent();
+        when(agentDao.selectById("agent-1")).thenReturn(agent);
+
+        agent.setRoleAssetUrl("https://user:secret@assets.example/cheese.bin");
+        assertNull(ReflectionTestUtils.invokeMethod(service, "buildRolePackage", device));
+
+        agent.setRoleAssetUrl("https://assets.example/cheese.bin");
+        agent.setRoleDistribution("typo-internal");
+        assertNull(ReflectionTestUtils.invokeMethod(service, "buildRolePackage", device));
+    }
+
+    @Test
+    void rolePackageRejectsInvalidStableIdentity() {
+        DeviceEntity device = new DeviceEntity();
+        device.setAgentId("agent-1");
+        AgentEntity agent = validRoleAgent();
+        when(agentDao.selectById("agent-1")).thenReturn(agent);
+
+        agent.setRoleCode("Cheese Cat");
+        assertNull(ReflectionTestUtils.invokeMethod(service, "buildRolePackage", device));
+
+        agent.setRoleCode("cheese_cat");
+        agent.setRoleAssetVersion("v".repeat(65));
+        assertNull(ReflectionTestUtils.invokeMethod(service, "buildRolePackage", device));
+
+        agent.setRoleAssetVersion("2026.08.16.1\r\nX-Injected: true");
+        assertNull(ReflectionTestUtils.invokeMethod(service, "buildRolePackage", device));
+    }
+
+    private AgentEntity validRoleAgent() {
+        AgentEntity agent = new AgentEntity();
+        agent.setId("agent-1");
+        agent.setRoleCode("cheese_cat");
+        agent.setRoleAssetVersion("2026.08.16.1");
+        agent.setRoleAssetUrl("https://assets.example/cheese.bin");
+        agent.setRoleAssetSha256("a".repeat(64));
+        agent.setRoleAssetSize(3456789L);
+        agent.setRoleDistribution("public");
+        return agent;
     }
 }

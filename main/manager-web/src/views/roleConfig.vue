@@ -55,6 +55,14 @@
                         </div>
                       </div>
                     </el-form-item>
+                    <div v-if="form.roleCode" class="role-visual-card">
+                      <img v-if="form.roleAvatarUrl" :src="form.roleAvatarUrl" alt="角色预览" />
+                      <div>
+                        <strong>{{ form.roleCode }}</strong>
+                        <span>资源 {{ form.roleAssetVersion || '未配置' }}</span>
+                        <span>保存后设备将在下次配置检查时安全切换</span>
+                      </div>
+                    </div>
                     <el-form-item :label="$t('roleConfig.contextProvider') + '：'" class="context-provider-item">
                       <div style="display: flex; align-items: center; justify-content: space-between;">
                         <span style="color: #606266; font-size: 13px;">
@@ -306,6 +314,7 @@ import ContextProviderDialog from "@/components/ContextProviderDialog.vue";
 import HeaderBar from "@/components/HeaderBar.vue";
 import i18n from "@/i18n";
 import featureManager from "@/utils/featureManager"; 
+import { validateRolePackage } from "@/utils/rolePackage";
 
 export default {
   name: "RoleConfigPage",
@@ -319,6 +328,14 @@ export default {
         ttsVoiceId: "",
         chatHistoryConf: 0,
         systemPrompt: "",
+        roleCode: "",
+        roleAvatarUrl: "",
+        roleThemeJson: "{}",
+        roleAssetVersion: "",
+        roleAssetUrl: "",
+        roleAssetSha256: "",
+        roleAssetSize: 0,
+        roleDistribution: "public",
         summaryMemory: "",
         langCode: "",
         language: "",
@@ -369,6 +386,11 @@ export default {
       this.$router.push("/home");
     },
     saveConfig() {
+      const roleError = validateRolePackage(this.form);
+      if (roleError) {
+        this.$message.error({ message: roleError, showClose: true });
+        return;
+      }
       const configData = {
         agentCode: this.form.agentCode,
         agentName: this.form.agentName,
@@ -382,6 +404,14 @@ export default {
         memModelId: this.form.model.memModelId,
         intentModelId: this.form.model.intentModelId,
         systemPrompt: this.form.systemPrompt,
+        roleCode: this.form.roleCode,
+        roleAvatarUrl: this.form.roleAvatarUrl,
+        roleThemeJson: this.form.roleThemeJson,
+        roleAssetVersion: this.form.roleAssetVersion,
+        roleAssetUrl: this.form.roleAssetUrl,
+        roleAssetSha256: this.form.roleAssetSha256,
+        roleAssetSize: this.form.roleAssetSize,
+        roleDistribution: this.form.roleDistribution,
         summaryMemory: this.form.summaryMemory,
         langCode: this.form.langCode,
         language: this.form.language,
@@ -421,6 +451,14 @@ export default {
             ttsVoiceId: "",
             chatHistoryConf: 0,
             systemPrompt: "",
+            roleCode: "",
+            roleAvatarUrl: "",
+            roleThemeJson: "{}",
+            roleAssetVersion: "",
+            roleAssetUrl: "",
+            roleAssetSha256: "",
+            roleAssetSize: 0,
+            roleDistribution: "public",
             summaryMemory: "",
             langCode: "",
             language: "",
@@ -478,6 +516,14 @@ export default {
         ttsVoiceId: templateData.ttsVoiceId || this.form.ttsVoiceId,
         chatHistoryConf: templateData.chatHistoryConf || this.form.chatHistoryConf,
         systemPrompt: templateData.systemPrompt || this.form.systemPrompt,
+        roleCode: templateData.roleCode || "",
+        roleAvatarUrl: templateData.roleAvatarUrl || "",
+        roleThemeJson: templateData.roleThemeJson || "{}",
+        roleAssetVersion: templateData.roleAssetVersion || "",
+        roleAssetUrl: templateData.roleAssetUrl || "",
+        roleAssetSha256: templateData.roleAssetSha256 || "",
+        roleAssetSize: templateData.roleAssetSize || 0,
+        roleDistribution: templateData.roleDistribution || "public",
         summaryMemory: templateData.summaryMemory || this.form.summaryMemory,
         langCode: templateData.langCode || this.form.langCode,
         model: {
@@ -1102,6 +1148,32 @@ export default {
   background-color: white;
   display: flex;
   flex-direction: column;
+}
+
+.role-visual-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: -4px 0 18px 72px;
+  padding: 10px 12px;
+  border: 1px solid #e4e9ff;
+  border-radius: 12px;
+  background: #f8f9ff;
+}
+
+.role-visual-card img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.role-visual-card div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: #69708a;
+  font-size: 12px;
 }
 
 .config-card {

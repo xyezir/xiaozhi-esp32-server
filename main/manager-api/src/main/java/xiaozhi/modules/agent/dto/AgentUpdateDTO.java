@@ -53,6 +53,23 @@ public class AgentUpdateDTO implements Serializable {
     @Schema(description = "角色设定参数", example = "你是一个专业的客服助手，负责回答用户问题并提供帮助", nullable = true)
     private String systemPrompt;
 
+    @Schema(description = "设备角色稳定标识", nullable = true)
+    private String roleCode;
+    @Schema(description = "角色预览图", nullable = true)
+    private String roleAvatarUrl;
+    @Schema(description = "角色主题JSON", nullable = true)
+    private String roleThemeJson;
+    @Schema(description = "角色资源版本", nullable = true)
+    private String roleAssetVersion;
+    @Schema(description = "角色资源下载地址", nullable = true)
+    private String roleAssetUrl;
+    @Schema(description = "角色资源SHA-256", nullable = true)
+    private String roleAssetSha256;
+    @Schema(description = "角色资源字节数", nullable = true)
+    private Long roleAssetSize;
+    @Schema(description = "角色分发级别", nullable = true)
+    private String roleDistribution;
+
     @Schema(description = "总结记忆", example = "构建可生长的动态记忆网络，在有限空间内保留关键信息的同时，智能维护信息演变轨迹\n"
             + "根据对话记录，总结user的重要信息，以便在未来的对话中提供更个性化的服务", nullable = true)
     private String summaryMemory;

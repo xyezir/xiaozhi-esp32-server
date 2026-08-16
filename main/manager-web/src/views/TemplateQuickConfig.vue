@@ -48,6 +48,36 @@
                   maxlength="2000"
                 />
               </el-form-item>
+
+              <div class="role-package-grid">
+                <el-form-item label="角色标识" prop="roleCode">
+                  <el-input v-model="form.roleCode" placeholder="pet_expert_shilang" />
+                </el-form-item>
+                <el-form-item label="资源版本" prop="roleAssetVersion">
+                  <el-input v-model="form.roleAssetVersion" placeholder="2026.08.16.1" />
+                </el-form-item>
+                <el-form-item label="预览图" prop="roleAvatarUrl">
+                  <el-input v-model="form.roleAvatarUrl" placeholder="https://.../avatar.png" />
+                </el-form-item>
+                <el-form-item label="分发级别" prop="roleDistribution">
+                  <el-select v-model="form.roleDistribution">
+                    <el-option label="公开可分发" value="public" />
+                    <el-option label="仅内部原型" value="internal-only" />
+                  </el-select>
+                </el-form-item>
+                <el-form-item label="资源包" prop="roleAssetUrl" class="role-package-wide">
+                  <el-input v-model="form.roleAssetUrl" placeholder="https://.../role-assets.bin" />
+                </el-form-item>
+                <el-form-item label="SHA-256" prop="roleAssetSha256" class="role-package-wide">
+                  <el-input v-model="form.roleAssetSha256" maxlength="64" />
+                </el-form-item>
+                <el-form-item label="包字节数" prop="roleAssetSize">
+                  <el-input-number v-model="form.roleAssetSize" :min="0" :max="8388608" :controls="false" />
+                </el-form-item>
+                <el-form-item label="主题JSON" prop="roleThemeJson" class="role-package-wide">
+                  <el-input v-model="form.roleThemeJson" type="textarea" :rows="2" placeholder='{"accent":"#4CCC70"}' />
+                </el-form-item>
+              </div>
             </el-form>
           </el-card>
         </div>
@@ -59,6 +89,7 @@
 <script>
 import HeaderBar from "@/components/HeaderBar.vue";
 import agentApi from '@/apis/module/agent';
+import { validateRolePackage } from "@/utils/rolePackage";
 
 // 默认模型配置常量
 const DEFAULT_MODEL_CONFIG = {
@@ -80,6 +111,14 @@ export default {
         agentCode: "小智",
         agentName: "",
         systemPrompt: "",
+        roleCode: "",
+        roleAvatarUrl: "",
+        roleThemeJson: "{}",
+        roleAssetVersion: "",
+        roleAssetUrl: "",
+        roleAssetSha256: "",
+        roleAssetSize: 0,
+        roleDistribution: "public",
         sort: 0,
         model: { ...DEFAULT_MODEL_CONFIG }
       },
@@ -95,6 +134,11 @@ export default {
     
     // 保存配置
     saveConfig() {
+      const roleError = validateRolePackage(this.form);
+      if (roleError) {
+        this.$message.error({ message: roleError, showClose: true });
+        return;
+      }
       const configData = this.prepareConfigData();
       
       if (this.templateId) {
@@ -111,6 +155,14 @@ export default {
         agentCode: this.form.agentCode,
         agentName: this.form.agentName,
         systemPrompt: this.form.systemPrompt,
+        roleCode: this.form.roleCode,
+        roleAvatarUrl: this.form.roleAvatarUrl,
+        roleThemeJson: this.form.roleThemeJson,
+        roleAssetVersion: this.form.roleAssetVersion,
+        roleAssetUrl: this.form.roleAssetUrl,
+        roleAssetSha256: this.form.roleAssetSha256,
+        roleAssetSize: this.form.roleAssetSize,
+        roleDistribution: this.form.roleDistribution,
         sort: this.form.sort,
         functions: [],
         // 包含必要的模型字段以确保API调用成功
@@ -196,6 +248,14 @@ export default {
         agentName: templateData.agentName || this.form.agentName,
         agentCode: templateData.agentCode || this.form.agentCode,
         systemPrompt: templateData.systemPrompt || this.form.systemPrompt,
+        roleCode: templateData.roleCode || "",
+        roleAvatarUrl: templateData.roleAvatarUrl || "",
+        roleThemeJson: templateData.roleThemeJson || "{}",
+        roleAssetVersion: templateData.roleAssetVersion || "",
+        roleAssetUrl: templateData.roleAssetUrl || "",
+        roleAssetSha256: templateData.roleAssetSha256 || "",
+        roleAssetSize: templateData.roleAssetSize || 0,
+        roleDistribution: templateData.roleDistribution || "public",
         sort: templateData.sort || this.form.sort,
         model: {
           ttsModelId: templateData.ttsModelId || this.form.model.ttsModelId,
@@ -216,6 +276,14 @@ export default {
         agentName: this.$t('templateQuickConfig.newTemplate'),
         agentCode: '小智',
         systemPrompt: '',
+        roleCode: '',
+        roleAvatarUrl: '',
+        roleThemeJson: '{}',
+        roleAssetVersion: '',
+        roleAssetUrl: '',
+        roleAssetSha256: '',
+        roleAssetSize: 0,
+        roleDistribution: 'public',
         sort: 1
       };
       
@@ -295,6 +363,16 @@ export default {
   display: flex;
   flex-direction: column;
   padding: 0 !important;
+}
+
+.role-package-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 18px;
+}
+
+.role-package-wide {
+  grid-column: 1 / -1;
 }
 
 .content-panel {
