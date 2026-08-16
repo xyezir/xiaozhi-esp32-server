@@ -105,7 +105,7 @@ services:
       - ${ESP_ROLE_ROOT:-/home/luban/codebase/aiot/esp32-nezuko}/.tools/role-packs-public:/roles:ro
       - ./serve_role_files.py:/srv/serve_role_files.py:ro
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/cheese_cat-2026.08.16.1.bin', timeout=2).read(1)"]
+      test: ["CMD", "python", "-c", "import urllib.request; response=urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8080/cheese_cat-2026.08.16.1.bin', method='HEAD'), timeout=2); assert response.status == 200"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -123,7 +123,7 @@ services:
       - ${ESP_ROLE_ROOT:-/home/luban/codebase/aiot/esp32-nezuko}/main/assets/characters/source/original:/avatars:ro
       - ./serve_role_files.py:/srv/serve_role_files.py:ro
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/cheese_cat_idle.png', timeout=2).read(1)"]
+      test: ["CMD", "python", "-c", "import urllib.request; response=urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8080/cheese_cat_idle.png', method='HEAD'), timeout=2); assert response.status == 200"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -143,7 +143,7 @@ services:
       - ${ESP_ROLE_ROOT:-/home/luban/codebase/aiot/esp32-nezuko}/main/assets/characters/private:/avatars:ro
       - ./serve_role_files.py:/srv/serve_role_files.py:ro
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/nezuko_proto-2026.08.16.1.bin', timeout=2).read(1)"]
+      test: ["CMD", "python", "-c", "import urllib.request; response=urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8080/nezuko_proto-2026.08.16.1.bin', method='HEAD'), timeout=2); assert response.status == 200"]
       interval: 30s
       timeout: 5s
       retries: 3
