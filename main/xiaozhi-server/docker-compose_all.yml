@@ -43,6 +43,8 @@ services:
     ports:
       # 智控台
       - "8002:8002"
+      # 2.3.13 开发固件的兼容 OTA 入口，与 8002 指向同一 manager
+      - "18002:8002"
     environment:
       - TZ=Asia/Shanghai
       - SPRING_DATASOURCE_DRUID_URL=jdbc:mysql://xiaozhi-esp32-server-db:3306/xiaozhi_esp32_server?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true&connectTimeout=30000&socketTimeout=30000&autoReconnect=true&failOverReadOnly=false&maxReconnects=10
@@ -88,5 +90,62 @@ services:
       retries: 3
     networks:
       - default
+
+  # 开发/测试角色包：公共包与预览图
+  role-assets:
+    image: python:3.10-slim
+    container_name: xiaozhi-role-assets
+    restart: always
+    command: ["python", "/srv/serve_role_files.py"]
+    environment:
+      - ROLE_FILE_SET=public-assets
+    ports:
+      - "18082:8080"
+    volumes:
+      - ${ESP_ROLE_ROOT:-/home/luban/codebase/aiot/esp32-nezuko}/.tools/role-packs-public:/roles:ro
+      - ./serve_role_files.py:/srv/serve_role_files.py:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/cheese_cat-2026.08.16.1.bin', timeout=2).read(1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  role-avatars:
+    image: python:3.10-slim
+    container_name: xiaozhi-role-avatars
+    restart: always
+    command: ["python", "/srv/serve_role_files.py"]
+    environment:
+      - ROLE_FILE_SET=public-avatars
+    ports:
+      - "18083:8080"
+    volumes:
+      - ${ESP_ROLE_ROOT:-/home/luban/codebase/aiot/esp32-nezuko}/main/assets/characters/source/original:/avatars:ro
+      - ./serve_role_files.py:/srv/serve_role_files.py:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/cheese_cat_idle.png', timeout=2).read(1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # 内部原型不进入公共 catalog，只暴露精确白名单路径
+  role-internal-assets:
+    image: python:3.10-slim
+    container_name: xiaozhi-role-internal-assets
+    restart: always
+    command: ["python", "/srv/serve_role_files.py"]
+    environment:
+      - ROLE_FILE_SET=internal
+    ports:
+      - "18084:8080"
+    volumes:
+      - ${ESP_ROLE_ROOT:-/home/luban/codebase/aiot/esp32-nezuko}/.tools/role-packs-internal:/roles:ro
+      - ${ESP_ROLE_ROOT:-/home/luban/codebase/aiot/esp32-nezuko}/main/assets/characters/private:/avatars:ro
+      - ./serve_role_files.py:/srv/serve_role_files.py:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/nezuko_proto-2026.08.16.1.bin', timeout=2).read(1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 networks:
   default:
