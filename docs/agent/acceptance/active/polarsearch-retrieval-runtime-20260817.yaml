@@ -1,7 +1,7 @@
 schema_version: 1
 goal_id: polarsearch-retrieval-runtime-20260817
 goal: 基于 cyjdata-index 现有 PolarSearch 检索能力交付可供小智调用的 Retrieval Runtime，先本机验收再部署 ACK 非生产环境
-status: in_progress
+status: passed
 authority:
   user_mandate: 端口已经部署；通过 kubectl 查看 cyjdata-index 生产配置；Harness 采用推荐方案，先本机后 ACK
   autonomy_profile: nonprod-auto
@@ -10,6 +10,7 @@ authority:
     - /home/luban/codebase/aiot/xiaozhi-esp32-server
   branches:
     - codex/polarsearch-retrieval-runtime
+    - codex/retrieval-ack-closeout
 scope:
   in:
     - 只读复核 cyjdata-index 生产检索契约、网络可达性和权限边界，不复制 PolarSearch 或数据库凭据
@@ -40,7 +41,7 @@ criteria:
       - Bounded production query returned 3 non-degraded product results; public knowledge returned contractVersion 1 with zero items and degraded=true
       - The production API key was held only in process memory and checked absent from every tracked repository file
     status: pass
-    last_verified_at: 2026-08-17T20:24:20+08:00
+    last_verified_at: 2026-08-17T21:50:53+08:00
   - id: AC-02
     outcome: Retrieval Runtime 对产品和公开知识提供稳定契约，拒绝未签名受限知识，并对超时、鉴权失败和上游降级安全失败
     verifier:
@@ -50,10 +51,10 @@ criteria:
     required: true
     owner: agent
     evidence:
-      - 6 Runtime contract tests pass, covering product normalization, partial knowledge degradation, cache reuse, auth failure redaction, restricted scope rejection and unsafe reason filtering
+      - 7 Runtime contract tests pass, covering product normalization, partial knowledge degradation, cache reuse, upstream auth failure redaction, restricted scope rejection, unsafe reason filtering and application-token authentication before request parsing
       - Ruff format/check and git diff --check pass for the Runtime and plugin code
     status: pass
-    last_verified_at: 2026-08-17T20:24:20+08:00
+    last_verified_at: 2026-08-17T21:47:47+08:00
   - id: AC-03
     outcome: xiaozhi-server 检索工具可调用本机 Harness，返回有限且可引用的上下文，上游不可用时不泄露异常和响应正文
     verifier:
@@ -63,11 +64,11 @@ criteria:
     required: true
     owner: agent
     evidence:
-      - 10 isolated server tests pass with network disabled; includes bounded grounded context, generic timeout fallback, trusted-host validation and connection cleanup
+      - 11 isolated server tests pass with network disabled; includes bounded grounded context, generic timeout fallback, trusted-host validation, connection cleanup and X-Retrieval-Token forwarding
       - Disposable MySQL 9.6 validation proves the Plugin provider migration is idempotent, rollback-safe and contains no API-key field
       - Full manager unit run reached 136 passing tests; 5 pre-existing Spring context tests require a local MySQL listener and failed only because 127.0.0.1:3306 was absent, so the disposable migration verifier is the authoritative database evidence
     status: pass
-    last_verified_at: 2026-08-17T20:24:20+08:00
+    last_verified_at: 2026-08-17T21:50:53+08:00
   - id: AC-04
     outcome: 本机容器化 Harness 健康，能通过 cyjdata-v2 生产只读 API 完成一次有界产品检索，且未发布公网端口
     verifier:
@@ -78,10 +79,10 @@ criteria:
     owner: agent
     evidence:
       - Hardened read-only container started healthy with the API key mounted from a temporary mode-0600 file and no published host port
-      - Final real product-plus-public-knowledge request returned 4 normalized items in 718 ms; answerable=true and degraded=true only because the knowledge corpus is not populated
+      - Final Alpine candidate real product-plus-public-knowledge request returned 4 normalized items in 755 ms; answerable=true and degraded=true only because the knowledge corpus is not populated
       - Container ran without root capabilities, with read-only root filesystem, no-new-privileges and a bounded tmpfs
     status: pass
-    last_verified_at: 2026-08-17T20:24:20+08:00
+    last_verified_at: 2026-08-17T21:47:47+08:00
   - id: AC-05
     outcome: 同一镜像和配置契约部署到 ACK 非生产环境，健康检查和内部产品检索 smoke 通过，生产资源保持只读
     verifier:
@@ -90,9 +91,13 @@ criteria:
     environment: ack-nonprod
     required: true
     owner: agent
-    evidence: []
-    status: pending
-    last_verified_at: null
+    evidence:
+      - ACK chongyejia-dev runs immutable image retrieval_48f1757a935999a5ab36f86bb72b22d8de18f06a at digest sha256:86e4d3c9805b3f4f98255eec97651bc7fcbe33862e981da36fe9ad94de4e2929; pod is Ready with zero restarts
+      - ClusterIP Service and authorized consumer-pod smoke returned 3 product results; a separate authenticated live query returned 3 results in 592 ms with degraded=false
+      - Unauthenticated retrieval returns HTTP 401, no Ingress exists, credentials are Secret-mounted and were neither printed nor committed; standard NetworkPolicy is retained but the ACK CNI did not enforce its negative probe, so application-token authentication is the effective boundary
+      - GitHub Actions run 32031005592 completed successfully and PR 17 contains the ACK closeout changes; cyjdata-prod resources remained read-only throughout
+    status: pass
+    last_verified_at: 2026-08-17T21:47:47+08:00
 completion:
   required_status: pass
   allow_not_applicable: true
