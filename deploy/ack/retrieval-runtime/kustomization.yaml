@@ -8,5 +8,5 @@ resources:
   - network-policy.yaml
 images:
   - name: xiaozhi-retrieval-runtime
-    newName: registry.cn-shanghai.aliyuncs.com/chongyejia/xiaozhi-retrieval-runtime
-    newTag: 0.1.0-candidate
+    newName: ghcr.io/xyezir/xiaozhi-esp32-server
+    newTag: retrieval_latest
