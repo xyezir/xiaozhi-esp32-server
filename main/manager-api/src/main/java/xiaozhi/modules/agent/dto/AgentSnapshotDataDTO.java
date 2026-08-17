@@ -38,6 +38,11 @@ public class AgentSnapshotDataDTO implements Serializable {
     private String roleDistribution;
     private String roleWakeWord;
     private String roleWakeModel;
+    private String roleWakeMode;
+    private String roleWakeCommand;
+    private String roleWakeLanguage;
+    private java.math.BigDecimal roleWakeThreshold;
+    private Long roleWakeConfigVersion;
     private String summaryMemory;
     private String langCode;
     private String language;

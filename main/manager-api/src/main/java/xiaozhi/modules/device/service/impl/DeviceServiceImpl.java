@@ -76,6 +76,11 @@ import xiaozhi.modules.sys.service.SysUserUtilService;
 @AllArgsConstructor
 public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> implements DeviceService {
 
+    private static final String DECOUPLED_ROLE_MIN_VERSION = "2.3.16";
+    private static final int DECOUPLED_ROLE_FLASH_BYTES = 32 * 1024 * 1024;
+    private static final int FIXED_MODEL_PARTITION_ADDRESS = 0x1000000;
+    private static final int FIXED_MODEL_PARTITION_MIN_BYTES = 3 * 1024 * 1024;
+
     private final DeviceDao deviceDao;
     private final SysUserUtilService sysUserUtilService;
     private final SysParamsService sysParamsService;
@@ -271,7 +276,9 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
         }
 
         if (deviceById != null) {
-            DeviceReportRespDTO.Role role = buildRolePackage(deviceById);
+            DeviceReportRespDTO.Role role = supportsDecoupledRoleRuntime(deviceReport)
+                    ? buildRolePackage(deviceById)
+                    : null;
             if (role != null) {
                 response.setRole(role);
             }
@@ -311,7 +318,9 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
             return null;
         }
         RoleWakeProfileContract.Validation wakeProfile = RoleWakeProfileContract.validate(
-                agent.getRoleWakeWord(), agent.getRoleWakeModel());
+                agent.getRoleWakeMode(), agent.getRoleWakeWord(), agent.getRoleWakeModel(),
+                agent.getRoleWakeCommand(), agent.getRoleWakeLanguage(),
+                agent.getRoleWakeThreshold(), agent.getRoleWakeConfigVersion());
         if (!wakeProfile.valid()) {
             log.error("角色唤醒配置无效: agentId={}, reason={}", agent.getId(), wakeProfile.error());
             return null;
@@ -343,8 +352,41 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
         if (wakeProfile.configured()) {
             role.setWakeWord(wakeProfile.wakeWord());
             role.setWakeModel(wakeProfile.wakeModel());
+            role.setWakeMode(wakeProfile.wakeMode());
+            role.setWakeCommand(wakeProfile.wakeCommand());
+            role.setWakeLanguage(wakeProfile.wakeLanguage());
+            role.setWakeThreshold(wakeProfile.wakeThreshold());
+            role.setWakeConfigVersion(wakeProfile.wakeConfigVersion());
         }
         return role;
+    }
+
+    /**
+     * New visual-only role packs require an app that understands the fixed
+     * model partition. Older apps must keep their current role and model mmap.
+     */
+    private boolean supportsDecoupledRoleRuntime(DeviceReportReqDTO report) {
+        if (report == null || report.getApplication() == null ||
+                StringUtils.isBlank(report.getApplication().getVersion()) ||
+                report.getFlashSize() == null ||
+                report.getFlashSize() < DECOUPLED_ROLE_FLASH_BYTES ||
+                report.getPartitionTable() == null) {
+            return false;
+        }
+        try {
+            if (compareVersions(report.getApplication().getVersion(),
+                    DECOUPLED_ROLE_MIN_VERSION) < 0) {
+                return false;
+            }
+        } catch (NumberFormatException exception) {
+            return false;
+        }
+        return report.getPartitionTable().stream().anyMatch(partition ->
+                partition != null && "model".equals(partition.getLabel()) &&
+                partition.getAddress() != null &&
+                partition.getAddress() == FIXED_MODEL_PARTITION_ADDRESS &&
+                partition.getSize() != null &&
+                partition.getSize() >= FIXED_MODEL_PARTITION_MIN_BYTES);
     }
 
     @Override

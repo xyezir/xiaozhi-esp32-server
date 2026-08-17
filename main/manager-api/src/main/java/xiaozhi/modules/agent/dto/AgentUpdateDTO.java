@@ -92,6 +92,16 @@ public class AgentUpdateDTO implements Serializable {
     private String roleWakeWord;
     @Schema(description = "角色实际 WakeNet 模型标识；与唤醒短语原子提交", nullable = true)
     private String roleWakeModel;
+    @Schema(description = "角色唤醒模式: trained/dynamic", nullable = true)
+    private String roleWakeMode;
+    @Schema(description = "动态唤醒声学命令", nullable = true)
+    private String roleWakeCommand;
+    @Schema(description = "动态唤醒语言: cn/en", nullable = true)
+    private String roleWakeLanguage;
+    @Schema(description = "动态唤醒检测阈值", nullable = true)
+    private BigDecimal roleWakeThreshold;
+    @Schema(description = "角色唤醒配置版本", nullable = true)
+    private Long roleWakeConfigVersion;
 
     @Schema(description = "总结记忆", example = "构建可生长的动态记忆网络，在有限空间内保留关键信息的同时，智能维护信息演变轨迹\n"
             + "根据对话记录，总结user的重要信息，以便在未来的对话中提供更个性化的服务", nullable = true)

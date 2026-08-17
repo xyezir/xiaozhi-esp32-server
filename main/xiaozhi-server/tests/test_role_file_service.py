@@ -25,6 +25,9 @@ class RoleFileServiceTest(TestCase):
         self.assertEqual(
             set(module.FILES),
             {
+                "/pet_expert_shilang-2026.08.17.1.bin",
+                "/cheese_cat-2026.08.17.1.bin",
+                "/beta_dog-2026.08.17.1.bin",
                 "/pet_expert_shilang-2026.08.16.2.bin",
                 "/cheese_cat-2026.08.16.2.bin",
                 "/beta_dog-2026.08.16.2.bin",
@@ -55,6 +58,7 @@ class RoleFileServiceTest(TestCase):
         self.assertEqual(
             set(module.FILES),
             {
+                "/nezuko_proto-2026.08.17.1.bin",
                 "/nezuko_proto-2026.08.16.2.bin",
                 "/nezuko_proto-2026.08.16.1.bin",
                 "/nezuko_proto_idle_round_v2.png",

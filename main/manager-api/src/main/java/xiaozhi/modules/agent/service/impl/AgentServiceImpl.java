@@ -182,12 +182,19 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
     @Override
     public boolean insert(AgentEntity entity) {
         RoleWakeProfileContract.Validation wakeProfile = RoleWakeProfileContract.validate(
-                entity.getRoleWakeWord(), entity.getRoleWakeModel());
+                entity.getRoleWakeMode(), entity.getRoleWakeWord(), entity.getRoleWakeModel(),
+                entity.getRoleWakeCommand(), entity.getRoleWakeLanguage(),
+                entity.getRoleWakeThreshold(), entity.getRoleWakeConfigVersion());
         if (!wakeProfile.valid()) {
             throw new RenException(wakeProfile.error());
         }
         entity.setRoleWakeWord(wakeProfile.wakeWord());
         entity.setRoleWakeModel(wakeProfile.wakeModel());
+        entity.setRoleWakeMode(wakeProfile.wakeMode());
+        entity.setRoleWakeCommand(wakeProfile.wakeCommand());
+        entity.setRoleWakeLanguage(wakeProfile.wakeLanguage());
+        entity.setRoleWakeThreshold(wakeProfile.wakeThreshold());
+        entity.setRoleWakeConfigVersion(wakeProfile.wakeConfigVersion());
 
         // 如果ID为空，自动生成一个UUID作为ID
         if (entity.getId() == null || entity.getId().trim().isEmpty()) {
@@ -400,6 +407,7 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         }
 
         // 只更新提供的非空字段
+        boolean wakeProfileUpdated = false;
         if (dto.getAgentName() != null) {
             existingEntity.setAgentName(dto.getAgentName());
         }
@@ -472,14 +480,26 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         if (dto.getRoleDistribution() != null) {
             existingEntity.setRoleDistribution(dto.getRoleDistribution());
         }
-        if (dto.getRoleWakeWord() != null || dto.getRoleWakeModel() != null) {
+        if (dto.getRoleWakeWord() != null || dto.getRoleWakeModel() != null ||
+                dto.getRoleWakeMode() != null || dto.getRoleWakeCommand() != null ||
+                dto.getRoleWakeLanguage() != null || dto.getRoleWakeThreshold() != null ||
+                dto.getRoleWakeConfigVersion() != null) {
             RoleWakeProfileContract.Validation updateWakeProfile =
-                    RoleWakeProfileContract.validateAtomicUpdate(dto.getRoleWakeWord(), dto.getRoleWakeModel());
+                    RoleWakeProfileContract.validateAtomicUpdate(
+                            dto.getRoleWakeMode(), dto.getRoleWakeWord(), dto.getRoleWakeModel(),
+                            dto.getRoleWakeCommand(), dto.getRoleWakeLanguage(),
+                            dto.getRoleWakeThreshold(), dto.getRoleWakeConfigVersion());
             if (!updateWakeProfile.valid()) {
                 throw new RenException(updateWakeProfile.error());
             }
             existingEntity.setRoleWakeWord(updateWakeProfile.wakeWord());
             existingEntity.setRoleWakeModel(updateWakeProfile.wakeModel());
+            existingEntity.setRoleWakeMode(updateWakeProfile.wakeMode());
+            existingEntity.setRoleWakeCommand(updateWakeProfile.wakeCommand());
+            existingEntity.setRoleWakeLanguage(updateWakeProfile.wakeLanguage());
+            existingEntity.setRoleWakeThreshold(updateWakeProfile.wakeThreshold());
+            existingEntity.setRoleWakeConfigVersion(updateWakeProfile.wakeConfigVersion());
+            wakeProfileUpdated = true;
         }
         if (dto.getSummaryMemory() != null) {
             existingEntity.setSummaryMemory(dto.getSummaryMemory());
@@ -590,11 +610,19 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
             throw new RenException(ErrorCode.LLM_INTENT_PARAMS_MISMATCH);
         }
         RoleWakeProfileContract.Validation wakeProfile = RoleWakeProfileContract.validate(
-                existingEntity.getRoleWakeWord(), existingEntity.getRoleWakeModel());
+                existingEntity.getRoleWakeMode(), existingEntity.getRoleWakeWord(),
+                existingEntity.getRoleWakeModel(), existingEntity.getRoleWakeCommand(),
+                existingEntity.getRoleWakeLanguage(), existingEntity.getRoleWakeThreshold(),
+                existingEntity.getRoleWakeConfigVersion());
         if (!wakeProfile.valid()) {
             throw new RenException(wakeProfile.error());
         }
-        this.updateById(existingEntity);
+        if (!this.updateById(existingEntity)) {
+            throw new RenException("智能体配置写入失败");
+        }
+        if (wakeProfileUpdated && agentDao.updateRoleWakeProfile(existingEntity) != 1) {
+            throw new RenException("角色唤醒配置原子写入失败");
+        }
         if (createSnapshot) {
             agentSnapshotService.createSnapshot(agentId, "config");
         }
@@ -692,6 +720,11 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
             entity.setRoleDistribution(template.getRoleDistribution());
             entity.setRoleWakeWord(template.getRoleWakeWord());
             entity.setRoleWakeModel(template.getRoleWakeModel());
+            entity.setRoleWakeMode(template.getRoleWakeMode());
+            entity.setRoleWakeCommand(template.getRoleWakeCommand());
+            entity.setRoleWakeLanguage(template.getRoleWakeLanguage());
+            entity.setRoleWakeThreshold(template.getRoleWakeThreshold());
+            entity.setRoleWakeConfigVersion(template.getRoleWakeConfigVersion());
             if (Constant.MEMORY_NO_MEM.equals(entity.getMemModelId())
                     || Constant.MEMORY_MEM_REPORT_ONLY.equals(entity.getMemModelId())) {
                 entity.setSummaryMemory("");

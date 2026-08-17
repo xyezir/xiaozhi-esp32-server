@@ -3,4 +3,15 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="xiaozhi.modules.agent.dao.AgentTemplateDao">
+    <update id="updateRoleWakeProfile">
+        UPDATE ai_agent_template
+        SET role_wake_word = #{template.roleWakeWord,jdbcType=VARCHAR},
+            role_wake_model = #{template.roleWakeModel,jdbcType=VARCHAR},
+            role_wake_mode = #{template.roleWakeMode,jdbcType=VARCHAR},
+            role_wake_command = #{template.roleWakeCommand,jdbcType=VARCHAR},
+            role_wake_language = #{template.roleWakeLanguage,jdbcType=VARCHAR},
+            role_wake_threshold = #{template.roleWakeThreshold,jdbcType=DECIMAL},
+            role_wake_config_version = #{template.roleWakeConfigVersion,jdbcType=BIGINT}
+        WHERE id = #{template.id}
+    </update>
 </mapper>

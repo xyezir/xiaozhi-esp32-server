@@ -1,6 +1,7 @@
 package xiaozhi.modules.agent.service.impl;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
@@ -121,5 +122,17 @@ public class AgentTemplateServiceImpl extends CrudRepository<AgentTemplateDao, A
         
         // 如果没有空缺，返回最大序号+1
         return expectedSort;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateWithWakeProfile(AgentTemplateEntity template) {
+        if (!updateById(template)) {
+            return false;
+        }
+        if (baseMapper.updateRoleWakeProfile(template) != 1) {
+            throw new IllegalStateException("角色模板唤醒配置原子写入失败");
+        }
+        return true;
     }
 }

@@ -6,6 +6,9 @@ export function validateRolePackage(role) {
     role.roleAssetSha256,
     role.roleWakeWord,
     role.roleWakeModel,
+    role.roleWakeMode,
+    role.roleWakeCommand,
+    role.roleWakeLanguage,
   ].some((value) => typeof value === "string" && value.trim()) || Number(role.roleAssetSize) > 0;
 
   if (!configured) {
@@ -29,15 +32,57 @@ export function validateRolePackage(role) {
   }
   const wakeWord = (role.roleWakeWord || "").trim();
   const wakeModel = (role.roleWakeModel || "").trim();
+  const wakeMode = (role.roleWakeMode || (wakeWord || wakeModel ? "trained" : "")).trim();
+  const wakeCommand = (role.roleWakeCommand || "").trim().replace(/\s+/g, " ");
+  const wakeLanguage = (role.roleWakeLanguage || "").trim();
+  const wakeThreshold = role.roleWakeThreshold;
+  const rawWakeVersion = role.roleWakeConfigVersion;
+  const wakeVersion = Number(
+    rawWakeVersion === null || rawWakeVersion === undefined || rawWakeVersion === ''
+      ? (wakeWord ? 1 : 0)
+      : rawWakeVersion,
+  );
   if (Boolean(wakeWord) !== Boolean(wakeModel)) {
-    return "唤醒短语和 WakeNet 模型必须同时配置或同时清空";
+    return "唤醒短语和模型必须同时配置或同时清空";
   }
   if (wakeWord) {
     if ([...wakeWord].length > 32 || /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/u.test(wakeWord)) {
       return "唤醒短语最长 32 个字符，且不能包含控制字符";
     }
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/.test(wakeModel)) {
-      return "WakeNet 模型标识只能使用字母、数字、点、下划线和短横线，且最长 96 位";
+      return "唤醒模型标识只能使用字母、数字、点、下划线和短横线，且最长 96 位";
+    }
+    if (!["trained", "dynamic"].includes(wakeMode)) {
+      return "唤醒模式只能是 trained 或 dynamic";
+    }
+    if (!Number.isSafeInteger(wakeVersion) || wakeVersion <= 0 || wakeVersion > 4294967295) {
+      return "唤醒配置版本必须在 1 到 4294967295 之间";
+    }
+    if (wakeMode === "trained") {
+      if (!wakeModel.startsWith("wn")) {
+        return "trained 模式必须使用 WakeNet 模型";
+      }
+      const hasThreshold = wakeThreshold !== null && wakeThreshold !== undefined && wakeThreshold !== "";
+      if (wakeCommand || wakeLanguage || hasThreshold) {
+        return "trained 模式不能携带动态命令、语言或阈值";
+      }
+    } else {
+      if (wakeModel !== "mn5q8_cn") {
+        return "dynamic 模式当前只支持 mn5q8_cn 模型";
+      }
+      if (wakeLanguage !== "cn") {
+        return "dynamic 模式当前只支持 cn 语言";
+      }
+      const commandPattern = /^[a-z]+(?: [a-z]+){2,7}$/;
+      if (!commandPattern.test(wakeCommand) || wakeCommand.length > 160) {
+        return "动态命令必须是 3 到 8 个小写拼音音节，不能包含数字或特殊字符";
+      }
+      const threshold = wakeThreshold === "" || wakeThreshold === null || wakeThreshold === undefined
+        ? 0.2
+        : Number(wakeThreshold);
+      if (!Number.isFinite(threshold) || threshold < 0.05 || threshold > 0.95) {
+        return "动态唤醒阈值必须在 0.050 到 0.950 之间";
+      }
     }
   }
   try {

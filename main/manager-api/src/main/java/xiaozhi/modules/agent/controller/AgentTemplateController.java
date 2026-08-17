@@ -120,7 +120,7 @@ public class AgentTemplateController {
         if (validationError != null) {
             return validationError;
         }
-        boolean updated = agentTemplateService.updateById(template);
+        boolean updated = agentTemplateService.updateWithWakeProfile(template);
         if (updated) {
             return ResultUtils.success(template);
         } else {
@@ -130,12 +130,19 @@ public class AgentTemplateController {
 
     private Result<AgentTemplateEntity> validateWakeProfile(AgentTemplateEntity template) {
         RoleWakeProfileContract.Validation validation = RoleWakeProfileContract.validate(
-                template.getRoleWakeWord(), template.getRoleWakeModel());
+                template.getRoleWakeMode(), template.getRoleWakeWord(), template.getRoleWakeModel(),
+                template.getRoleWakeCommand(), template.getRoleWakeLanguage(),
+                template.getRoleWakeThreshold(), template.getRoleWakeConfigVersion());
         if (!validation.valid()) {
             return ResultUtils.error(validation.error());
         }
         template.setRoleWakeWord(validation.wakeWord());
         template.setRoleWakeModel(validation.wakeModel());
+        template.setRoleWakeMode(validation.wakeMode());
+        template.setRoleWakeCommand(validation.wakeCommand());
+        template.setRoleWakeLanguage(validation.wakeLanguage());
+        template.setRoleWakeThreshold(validation.wakeThreshold());
+        template.setRoleWakeConfigVersion(validation.wakeConfigVersion());
         return null;
     }
     

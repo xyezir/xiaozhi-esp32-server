@@ -59,6 +59,7 @@ import xiaozhi.modules.agent.service.AgentContextProviderService;
 import xiaozhi.modules.agent.service.AgentPluginMappingService;
 import xiaozhi.modules.agent.service.AgentSnapshotService;
 import xiaozhi.modules.agent.service.AgentTagService;
+import xiaozhi.modules.agent.support.RoleWakeProfileContract;
 import xiaozhi.modules.agent.vo.AgentInfoVO;
 import xiaozhi.modules.agent.vo.AgentSnapshotVO;
 import xiaozhi.modules.correctword.service.CorrectWordFileService;
@@ -184,6 +185,7 @@ public class AgentSnapshotServiceImpl extends BaseServiceImpl<AgentSnapshotDao, 
         }
 
         applyAgentFields(agent, restoreData);
+        normalizeRestoredWakeProfile(agent);
         validateRestoreParams(agent);
         applyMemoryPolicy(agent);
         agent.setUpdater(SecurityUser.getUserId());
@@ -355,6 +357,11 @@ public class AgentSnapshotServiceImpl extends BaseServiceImpl<AgentSnapshotDao, 
         data.setRoleDistribution(agent.getRoleDistribution());
         data.setRoleWakeWord(agent.getRoleWakeWord());
         data.setRoleWakeModel(agent.getRoleWakeModel());
+        data.setRoleWakeMode(agent.getRoleWakeMode());
+        data.setRoleWakeCommand(agent.getRoleWakeCommand());
+        data.setRoleWakeLanguage(agent.getRoleWakeLanguage());
+        data.setRoleWakeThreshold(agent.getRoleWakeThreshold());
+        data.setRoleWakeConfigVersion(agent.getRoleWakeConfigVersion());
         data.setSummaryMemory(agent.getSummaryMemory());
         data.setLangCode(agent.getLangCode());
         data.setLanguage(agent.getLanguage());
@@ -578,6 +585,23 @@ public class AgentSnapshotServiceImpl extends BaseServiceImpl<AgentSnapshotDao, 
         for (AgentSnapshotField field : AgentSnapshotField.values()) {
             field.applyTo(agent, data);
         }
+    }
+
+    private void normalizeRestoredWakeProfile(AgentEntity agent) {
+        RoleWakeProfileContract.Validation profile = RoleWakeProfileContract.validate(
+                agent.getRoleWakeMode(), agent.getRoleWakeWord(), agent.getRoleWakeModel(),
+                agent.getRoleWakeCommand(), agent.getRoleWakeLanguage(),
+                agent.getRoleWakeThreshold(), agent.getRoleWakeConfigVersion());
+        if (!profile.valid()) {
+            throw new RenException(profile.error());
+        }
+        agent.setRoleWakeMode(profile.wakeMode());
+        agent.setRoleWakeWord(profile.wakeWord());
+        agent.setRoleWakeModel(profile.wakeModel());
+        agent.setRoleWakeCommand(profile.wakeCommand());
+        agent.setRoleWakeLanguage(profile.wakeLanguage());
+        agent.setRoleWakeThreshold(profile.wakeThreshold());
+        agent.setRoleWakeConfigVersion(profile.wakeConfigVersion());
     }
 
     private void validateRestoreParams(AgentEntity agent) {

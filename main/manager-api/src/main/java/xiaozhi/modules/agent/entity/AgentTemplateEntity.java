@@ -116,6 +116,11 @@ public class AgentTemplateEntity implements Serializable {
     private String roleDistribution;
     private String roleWakeWord;
     private String roleWakeModel;
+    private String roleWakeMode;
+    private String roleWakeCommand;
+    private String roleWakeLanguage;
+    private BigDecimal roleWakeThreshold;
+    private Long roleWakeConfigVersion;
 
     /**
      * 总结记忆

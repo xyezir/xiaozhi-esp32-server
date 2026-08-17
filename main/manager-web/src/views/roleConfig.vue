@@ -107,9 +107,38 @@
                         <strong>{{ form.roleCode }}</strong>
                         <span>资源 {{ form.roleAssetVersion || '未配置' }}</span>
                         <span>当前实际唤醒词：{{ form.roleWakeWord || '你好小智（兼容回退）' }}</span>
-                        <span v-if="form.roleWakeModel">WakeNet：{{ form.roleWakeModel }}</span>
+                        <span v-if="form.roleWakeModel">{{ form.roleWakeMode === 'dynamic' ? 'MultiNet' : 'WakeNet' }}：{{ form.roleWakeModel }}</span>
+                        <span v-if="form.roleWakeMode === 'dynamic'">声学命令：{{ form.roleWakeCommand }}</span>
                         <span>保存后设备将在下次配置检查时安全切换</span>
                       </div>
+                    </div>
+                    <div v-if="form.roleCode" class="role-wake-editor">
+                      <el-form-item label="唤醒模式">
+                        <el-select v-model="form.roleWakeMode" @change="handleWakeModeChange">
+                          <el-option label="高可靠 WakeNet" value="trained" />
+                          <el-option label="动态 MultiNet" value="dynamic" />
+                        </el-select>
+                      </el-form-item>
+                      <el-form-item label="唤醒词">
+                        <el-input v-model="form.roleWakeWord" maxlength="32" placeholder="你好四郎" />
+                      </el-form-item>
+                      <el-form-item label="识别模型">
+                        <el-input v-model="form.roleWakeModel" maxlength="96" :placeholder="form.roleWakeMode === 'dynamic' ? 'mn5q8_cn' : 'wn9_nihaoxiaozhi_tts'" />
+                      </el-form-item>
+                      <el-form-item v-if="form.roleWakeMode === 'dynamic'" label="声学命令">
+                        <el-input v-model="form.roleWakeCommand" maxlength="160" placeholder="ni hao si lang" />
+                      </el-form-item>
+                      <el-form-item v-if="form.roleWakeMode === 'dynamic'" label="语言/阈值">
+                        <div class="role-wake-inline">
+                          <el-select v-model="form.roleWakeLanguage">
+                            <el-option label="中文" value="cn" />
+                          </el-select>
+                          <el-input-number v-model="form.roleWakeThreshold" :min="0.05" :max="0.95" :step="0.01" :precision="3" />
+                        </div>
+                      </el-form-item>
+                      <el-form-item label="配置版本">
+                        <el-input-number v-model="form.roleWakeConfigVersion" :min="1" :max="4294967295" :step="1" :precision="0" />
+                      </el-form-item>
                     </div>
                     <el-form-item class="context-provider-item">
                       <template #label>
@@ -542,6 +571,11 @@ export default {
         roleDistribution: "public",
         roleWakeWord: "",
         roleWakeModel: "",
+        roleWakeMode: "",
+        roleWakeCommand: "",
+        roleWakeLanguage: "",
+        roleWakeThreshold: null,
+        roleWakeConfigVersion: null,
         summaryMemory: "",
         langCode: "",
         language: "",
@@ -624,6 +658,23 @@ export default {
     }
   },
   methods: {
+    handleWakeModeChange(mode) {
+      this.form.roleWakeConfigVersion = this.form.roleWakeConfigVersion || 1;
+      if (mode === 'dynamic') {
+        if (!this.form.roleWakeModel || this.form.roleWakeModel.startsWith('wn')) {
+          this.form.roleWakeModel = 'mn5q8_cn';
+        }
+        this.form.roleWakeLanguage = this.form.roleWakeLanguage || 'cn';
+        this.form.roleWakeThreshold = this.form.roleWakeThreshold ?? 0.2;
+      } else {
+        this.form.roleWakeCommand = '';
+        this.form.roleWakeLanguage = '';
+        this.form.roleWakeThreshold = null;
+        if (!this.form.roleWakeModel || this.form.roleWakeModel.startsWith('mn')) {
+          this.form.roleWakeModel = 'wn9_nihaoxiaozhi_tts';
+        }
+      }
+    },
     goToHome() {
       this.$router.push("/home");
     },
@@ -678,6 +729,11 @@ export default {
         roleDistribution: this.form.roleDistribution,
         roleWakeWord: this.form.roleWakeWord,
         roleWakeModel: this.form.roleWakeModel,
+        roleWakeMode: this.form.roleWakeMode,
+        roleWakeCommand: this.form.roleWakeCommand,
+        roleWakeLanguage: this.form.roleWakeLanguage,
+        roleWakeThreshold: this.form.roleWakeThreshold,
+        roleWakeConfigVersion: this.form.roleWakeConfigVersion,
         summaryMemory: this.form.summaryMemory,
         langCode: this.form.langCode,
         language: this.form.language,
@@ -855,6 +911,11 @@ export default {
             roleDistribution: "public",
             roleWakeWord: "",
             roleWakeModel: "",
+            roleWakeMode: "",
+            roleWakeCommand: "",
+            roleWakeLanguage: "",
+            roleWakeThreshold: null,
+            roleWakeConfigVersion: null,
             summaryMemory: "",
             langCode: "",
             language: "",
@@ -927,6 +988,11 @@ export default {
         roleDistribution: templateData.roleDistribution || "public",
         roleWakeWord: templateData.roleWakeWord || "",
         roleWakeModel: templateData.roleWakeModel || "",
+        roleWakeMode: templateData.roleWakeMode || (templateData.roleWakeWord ? "trained" : ""),
+        roleWakeCommand: templateData.roleWakeCommand || "",
+        roleWakeLanguage: templateData.roleWakeLanguage || "",
+        roleWakeThreshold: templateData.roleWakeThreshold ?? null,
+        roleWakeConfigVersion: templateData.roleWakeConfigVersion || (templateData.roleWakeWord ? 1 : null),
         summaryMemory: templateData.summaryMemory || this.form.summaryMemory,
         langCode: templateData.langCode || this.form.langCode,
         model: {
@@ -2057,6 +2123,29 @@ export default {
   gap: 3px;
   color: #69708a;
   font-size: 12px;
+}
+
+.role-wake-editor {
+  margin: -8px 0 18px 72px;
+  padding: 12px;
+  border: 1px solid #e4e9ff;
+  border-radius: 12px;
+  background: #fbfcff;
+}
+
+.role-wake-editor ::v-deep .el-form-item {
+  margin-bottom: 12px;
+}
+
+.role-wake-editor ::v-deep .el-form-item:last-child {
+  margin-bottom: 0;
+}
+
+.role-wake-inline {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(140px, 1fr);
+  gap: 8px;
+  width: 100%;
 }
 
 .config-card {

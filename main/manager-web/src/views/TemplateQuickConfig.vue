@@ -74,11 +74,31 @@
                 <el-form-item label="包字节数" prop="roleAssetSize">
                   <el-input-number v-model="form.roleAssetSize" :min="0" :max="8388608" :controls="false" />
                 </el-form-item>
-                <el-form-item label="实际唤醒词" prop="roleWakeWord">
-                  <el-input v-model="form.roleWakeWord" placeholder="你好小智" maxlength="32" />
+                <el-form-item label="唤醒模式" prop="roleWakeMode">
+                  <el-select v-model="form.roleWakeMode" clearable placeholder="未配置">
+                    <el-option label="高可靠 WakeNet" value="trained" />
+                    <el-option label="动态 MultiNet" value="dynamic" />
+                  </el-select>
                 </el-form-item>
-                <el-form-item label="WakeNet模型" prop="roleWakeModel">
-                  <el-input v-model="form.roleWakeModel" placeholder="wn9_nihaoxiaozhi_tts" maxlength="96" />
+                <el-form-item label="实际唤醒词" prop="roleWakeWord">
+                  <el-input v-model="form.roleWakeWord" placeholder="你好四郎" maxlength="32" />
+                </el-form-item>
+                <el-form-item label="识别模型" prop="roleWakeModel">
+                  <el-input v-model="form.roleWakeModel" :placeholder="form.roleWakeMode === 'dynamic' ? 'mn5q8_cn' : 'wn9_nihaoxiaozhi_tts'" maxlength="96" />
+                </el-form-item>
+                <el-form-item v-if="form.roleWakeMode === 'dynamic'" label="识别语言" prop="roleWakeLanguage">
+                  <el-select v-model="form.roleWakeLanguage">
+                    <el-option label="中文" value="cn" />
+                  </el-select>
+                </el-form-item>
+                <el-form-item v-if="form.roleWakeMode === 'dynamic'" label="声学命令" prop="roleWakeCommand" class="role-package-wide">
+                  <el-input v-model="form.roleWakeCommand" placeholder="ni hao si lang" maxlength="160" />
+                </el-form-item>
+                <el-form-item v-if="form.roleWakeMode === 'dynamic'" label="检测阈值" prop="roleWakeThreshold">
+                  <el-input-number v-model="form.roleWakeThreshold" :min="0.05" :max="0.95" :step="0.01" :precision="3" />
+                </el-form-item>
+                <el-form-item v-if="form.roleWakeMode" label="配置版本" prop="roleWakeConfigVersion">
+                  <el-input-number v-model="form.roleWakeConfigVersion" :min="1" :max="4294967295" :step="1" :precision="0" />
                 </el-form-item>
                 <el-form-item label="主题JSON" prop="roleThemeJson" class="role-package-wide">
                   <el-input v-model="form.roleThemeJson" type="textarea" :rows="2" placeholder='{"accent":"#4CCC70"}' />
@@ -131,6 +151,11 @@ export default {
         roleDistribution: "public",
         roleWakeWord: "",
         roleWakeModel: "",
+        roleWakeMode: "",
+        roleWakeCommand: "",
+        roleWakeLanguage: "",
+        roleWakeThreshold: null,
+        roleWakeConfigVersion: null,
         sort: 0,
         model: { ...DEFAULT_MODEL_CONFIG }
       },
@@ -177,6 +202,11 @@ export default {
         roleDistribution: this.form.roleDistribution,
         roleWakeWord: this.form.roleWakeWord,
         roleWakeModel: this.form.roleWakeModel,
+        roleWakeMode: this.form.roleWakeMode,
+        roleWakeCommand: this.form.roleWakeCommand,
+        roleWakeLanguage: this.form.roleWakeLanguage,
+        roleWakeThreshold: this.form.roleWakeThreshold,
+        roleWakeConfigVersion: this.form.roleWakeConfigVersion,
         sort: this.form.sort,
         functions: [],
         // 包含必要的模型字段以确保API调用成功
@@ -272,6 +302,11 @@ export default {
         roleDistribution: templateData.roleDistribution || "public",
         roleWakeWord: templateData.roleWakeWord || "",
         roleWakeModel: templateData.roleWakeModel || "",
+        roleWakeMode: templateData.roleWakeMode || (templateData.roleWakeWord ? "trained" : ""),
+        roleWakeCommand: templateData.roleWakeCommand || "",
+        roleWakeLanguage: templateData.roleWakeLanguage || "",
+        roleWakeThreshold: templateData.roleWakeThreshold ?? null,
+        roleWakeConfigVersion: templateData.roleWakeConfigVersion || (templateData.roleWakeWord ? 1 : null),
         sort: templateData.sort || this.form.sort,
         model: {
           ttsModelId: templateData.ttsModelId || this.form.model.ttsModelId,
@@ -302,6 +337,11 @@ export default {
         roleDistribution: 'public',
         roleWakeWord: '',
         roleWakeModel: '',
+        roleWakeMode: '',
+        roleWakeCommand: '',
+        roleWakeLanguage: '',
+        roleWakeThreshold: null,
+        roleWakeConfigVersion: null,
         sort: 1
       };
       
