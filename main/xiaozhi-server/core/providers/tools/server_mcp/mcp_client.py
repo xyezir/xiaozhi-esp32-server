@@ -162,6 +162,49 @@ class ServerMCPClient:
         # 所有检查都通过，连接正常
         return True
 
+    def _build_http_headers(self) -> Dict[str, str]:
+        """Build remote MCP headers without requiring secrets in JSON config."""
+        headers = dict(self.config.get("headers", {}))
+        authorization_keys = [
+            key for key in headers if str(key).lower() == "authorization"
+        ]
+        token_file = self.config.get("authorization_token_file")
+
+        if token_file:
+            if authorization_keys or "API_ACCESS_TOKEN" in self.config:
+                raise ValueError(
+                    "authorization_token_file cannot be combined with another "
+                    "Authorization credential"
+                )
+            try:
+                with open(token_file, "r", encoding="utf-8") as secret_file:
+                    token = secret_file.read(4097)
+            except OSError as exc:
+                raise ValueError(
+                    f"Unable to read MCP authorization token file: {token_file}"
+                ) from exc
+
+            if len(token) > 4096:
+                raise ValueError("MCP authorization token is too long")
+            token = token.strip()
+            if not token or "\n" in token or "\r" in token:
+                raise ValueError("MCP authorization token must be one non-empty line")
+            headers["Authorization"] = f"Bearer {token}"
+
+        # TODO 兼容旧版本
+        if "API_ACCESS_TOKEN" in self.config:
+            if authorization_keys:
+                raise ValueError(
+                    "API_ACCESS_TOKEN cannot be combined with an Authorization header"
+                )
+            headers["Authorization"] = f"Bearer {self.config['API_ACCESS_TOKEN']}"
+            self.logger.bind(tag=TAG).warning(
+                "你正在使用旧过时的配置 API_ACCESS_TOKEN，请改用 headers 或 "
+                "authorization_token_file"
+            )
+
+        return headers
+
     async def _worker(self, read_timeout_seconds: timedelta | None = None,
              sampling_callback: SamplingFnT | None = None,
              elicitation_callback: ElicitationFnT | None = None,
@@ -192,11 +235,7 @@ class ServerMCPClient:
 
                 # 建立SSEClient
                 elif "url" in self.config:
-                    headers = dict(self.config.get("headers", {}))
-                    # TODO 兼容旧版本
-                    if "API_ACCESS_TOKEN" in self.config:
-                        headers["Authorization"] = f"Bearer {self.config['API_ACCESS_TOKEN']}"
-                        self.logger.bind(tag=TAG).warning(f"你正在使用旧过时的配置 API_ACCESS_TOKEN ，请在.mcp_server_settings.json中将API_ACCESS_TOKEN直接设置在headers中，例如 'Authorization': 'Bearer API_ACCESS_TOKEN'")
+                    headers = self._build_http_headers()
                    
                     # 根据transport类型选择不同的客户端，默认为SSE
                     transport_type = self.config.get("transport", "sse")

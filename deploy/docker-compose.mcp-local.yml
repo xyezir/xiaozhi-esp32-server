@@ -1,0 +1,12 @@
+services:
+  xiaozhi-esp32-server:
+    volumes:
+      - type: volume
+        source: mcp-secrets
+        target: /run/secrets/mcp
+        read_only: true
+
+volumes:
+  mcp-secrets:
+    external: true
+    name: xiaozhi-mcp-secrets

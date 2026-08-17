@@ -47,10 +47,8 @@
     "streamable-http-mcp-server": {
       "url": "http://localhost:8000/mcp",
       "transport": "streamable-http",
-      "headers": {
-        "Authorization": "Bearer YOUR TOKEN"
-      },
-      "des": "使用Streamable HTTP传输模式，适用于生产环境的Web部署"
+      "authorization_token_file": "/run/secrets/mcp/api_key",
+      "des": "使用Streamable HTTP传输模式；生产环境优先从只读密钥文件读取 Bearer Token，避免把密钥写进 JSON"
     }
   }
 }

@@ -1,0 +1,27 @@
+services:
+  retrieval-runtime:
+    environment:
+      CYJDATA_API_KEY: ""
+      CYJDATA_API_KEY_FILE: /run/secrets/retrieval/api_key
+      RETRIEVAL_AUTH_TOKEN: ""
+      RETRIEVAL_AUTH_TOKEN_FILE: /run/secrets/retrieval/auth_token
+    volumes:
+      - type: volume
+        source: retrieval-secrets
+        target: /run/secrets/retrieval
+        read_only: true
+
+  xiaozhi-esp32-server:
+    environment:
+      RETRIEVAL_AUTH_TOKEN: ""
+      RETRIEVAL_AUTH_TOKEN_FILE: /run/secrets/retrieval/auth_token
+    volumes:
+      - type: volume
+        source: retrieval-secrets
+        target: /run/secrets/retrieval
+        read_only: true
+
+volumes:
+  retrieval-secrets:
+    external: true
+    name: xiaozhi-retrieval-secrets
