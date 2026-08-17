@@ -1,9 +1,11 @@
+import os
 import unittest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import httpx
 from plugins_func.functions.retrieve_from_cyjdata import (
+    RetrievalRuntimeClient,
     _format_context,
     _load_config,
     close_retrieval_runtime_client,
@@ -25,6 +27,14 @@ def connection(**plugin_overrides):
 
 
 class RetrievalRuntimePluginTest(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.auth_env = patch.dict(
+            os.environ,
+            {"RETRIEVAL_AUTH_TOKEN": "test-retrieval-token-0000000000000000"},
+        )
+        self.auth_env.start()
+        self.addCleanup(self.auth_env.stop)
+
     async def test_returns_bounded_grounded_context(self):
         payload = {
             "contractVersion": 1,
@@ -90,6 +100,20 @@ class RetrievalRuntimePluginTest(unittest.IsolatedAsyncioTestCase):
 
         config = _load_config(connection(domains="product;publicKnowledge"))
         self.assertEqual(("product", "publicKnowledge"), config.domains)
+        self.assertNotIn(config.auth_token, map(str, config.identity))
+
+        with patch.dict(os.environ, {}, clear=True), self.assertRaises(ValueError):
+            _load_config(connection())
+
+    def test_client_sends_runtime_token_as_a_header(self):
+        config = _load_config(connection())
+        with patch(
+            "plugins_func.functions.retrieve_from_cyjdata.httpx.AsyncClient"
+        ) as client_factory:
+            RetrievalRuntimeClient(config)
+
+        headers = client_factory.call_args.kwargs["headers"]
+        self.assertEqual(config.auth_token, headers["X-Retrieval-Token"])
 
     def test_context_without_results_is_explicit(self):
         context = _format_context(

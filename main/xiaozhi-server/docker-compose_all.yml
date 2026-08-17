@@ -15,6 +15,7 @@ services:
       - CYJDATA_API_BASE_URL=${CYJDATA_API_BASE_URL:-https://data-admin.petsengine.cn}
       - CYJDATA_API_KEY=${CYJDATA_API_KEY:-}
       - CYJDATA_API_KEY_FILE=${CYJDATA_API_KEY_FILE:-}
+      - RETRIEVAL_AUTH_TOKEN=${RETRIEVAL_AUTH_TOKEN:-}
       - RETRIEVAL_TIMEOUT_SECONDS=${RETRIEVAL_TIMEOUT_SECONDS:-2.8}
       - RETRIEVAL_CONNECT_TIMEOUT_SECONDS=${RETRIEVAL_CONNECT_TIMEOUT_SECONDS:-0.8}
       - RETRIEVAL_CACHE_TTL_SECONDS=${RETRIEVAL_CACHE_TTL_SECONDS:-30}
@@ -48,6 +49,7 @@ services:
       - seccomp:unconfined
     environment:
       - TZ=Asia/Shanghai
+      - RETRIEVAL_AUTH_TOKEN=${RETRIEVAL_AUTH_TOKEN:-}
     volumes:
       # 配置文件目录
       - ./data:/opt/xiaozhi-esp32-server/data

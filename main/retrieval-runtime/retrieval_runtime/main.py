@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import hmac
 import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 
 from .models import RetrieveRequest, RetrieveResponse
 from .service import RetrievalService
@@ -13,7 +15,11 @@ from .upstream import CyjdataClient
 LOG = logging.getLogger("retrieval-runtime")
 
 
-def create_app(service: RetrievalService | None = None) -> FastAPI:
+def create_app(
+    service: RetrievalService | None = None,
+    *,
+    auth_token: str | None = None,
+) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         active_service = service
@@ -24,7 +30,13 @@ def create_app(service: RetrievalService | None = None) -> FastAPI:
                 LOG.error("retrieval runtime configuration is invalid")
                 raise
             active_service = RetrievalService(settings, CyjdataClient(settings))
+            active_auth_token = settings.auth_token
+        else:
+            active_auth_token = auth_token
+        if not active_auth_token:
+            raise SettingsError("retrieval runtime auth token is missing")
         app.state.retrieval_service = active_service
+        app.state.retrieval_auth_token = active_auth_token
         try:
             yield
         finally:
@@ -38,6 +50,17 @@ def create_app(service: RetrievalService | None = None) -> FastAPI:
         openapi_url=None,
         lifespan=lifespan,
     )
+
+    @app.middleware("http")
+    async def authenticate_retrieval(request: Request, call_next):
+        if request.url.path == "/v1/retrieve":
+            expected_token = getattr(request.app.state, "retrieval_auth_token", "")
+            provided_token = request.headers.get("X-Retrieval-Token", "")
+            if not provided_token or not hmac.compare_digest(
+                provided_token, expected_token
+            ):
+                return JSONResponse(status_code=401, content={"detail": "unauthorized"})
+        return await call_next(request)
 
     @app.get("/healthz")
     async def healthz() -> dict[str, str]:

@@ -13,7 +13,10 @@ cleanup() {
   if [[ -f "$secret_dir/api_key" ]]; then
     chmod u+w "$secret_dir/api_key" 2>/dev/null || true
   fi
-  rm -f "$secret_dir/api_key"
+  if [[ -f "$secret_dir/auth_token" ]]; then
+    chmod u+w "$secret_dir/auth_token" 2>/dev/null || true
+  fi
+  rm -f "$secret_dir/api_key" "$secret_dir/auth_token"
   rmdir "$secret_dir" 2>/dev/null || true
 }
 trap cleanup EXIT
@@ -22,6 +25,9 @@ kubectl -n cyjdata-prod get secret cyjdata-v2-auth \
   -o jsonpath='{.data.api_key}' | base64 --decode >"$secret_dir/api_key"
 chmod 600 "$secret_dir/api_key"
 test -s "$secret_dir/api_key"
+openssl rand -hex 32 >"$secret_dir/auth_token"
+chmod 600 "$secret_dir/auth_token"
+test -s "$secret_dir/auth_token"
 
 docker build --pull=false -f main/retrieval-runtime/Dockerfile -t "$image" .
 docker run -d --name "$container" \
@@ -32,7 +38,9 @@ docker run -d --name "$container" \
   --security-opt no-new-privileges:true \
   -e CYJDATA_API_BASE_URL=https://data-admin.petsengine.cn \
   -e CYJDATA_API_KEY_FILE=/run/secrets/cyjdata_api_key \
+  -e RETRIEVAL_AUTH_TOKEN_FILE=/run/secrets/retrieval_auth_token \
   -v "$secret_dir/api_key:/run/secrets/cyjdata_api_key:ro" \
+  -v "$secret_dir/auth_token:/run/secrets/retrieval_auth_token:ro" \
   "$image" >/dev/null
 
 for _ in $(seq 1 30); do
@@ -51,6 +59,7 @@ test "$(docker inspect --format '{{.State.Health.Status}}' "$container")" = heal
 docker exec -i "$container" python - <<'PY'
 import json
 import urllib.request
+from pathlib import Path
 
 request = urllib.request.Request(
     "http://127.0.0.1:8090/v1/retrieve",
@@ -63,7 +72,12 @@ request = urllib.request.Request(
         },
         ensure_ascii=False,
     ).encode("utf-8"),
-    headers={"Content-Type": "application/json"},
+    headers={
+        "Content-Type": "application/json",
+        "X-Retrieval-Token": Path(
+            "/run/secrets/retrieval_auth_token"
+        ).read_text(encoding="utf-8").strip(),
+    },
     method="POST",
 )
 with urllib.request.urlopen(request, timeout=8) as response:

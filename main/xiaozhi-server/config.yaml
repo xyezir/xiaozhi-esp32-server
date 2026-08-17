@@ -177,6 +177,7 @@ plugins:
   retrieve_from_cyjdata:
     description: "查询内部宠物商品、公开专业知识和课程目录。涉及选品、商品资料或自有语料时调用；资料不足时不要编造。"
     base_url: "http://retrieval-runtime:8090"
+    auth_token_file: "/run/secrets/retrieval/auth_token"
     allowed_hosts: ["retrieval-runtime", "127.0.0.1", "localhost"]
     domains: ["product", "publicKnowledge", "courseCatalog"]
     max_results: 4

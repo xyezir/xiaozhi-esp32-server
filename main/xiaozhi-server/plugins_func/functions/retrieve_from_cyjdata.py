@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import math
+import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlsplit
 
@@ -44,13 +47,18 @@ RETRIEVE_FROM_CYJDATA_FUNCTION_DESC = {
 @dataclass(frozen=True)
 class RetrievalPluginConfig:
     base_url: str
+    auth_token: str
     domains: tuple[str, ...]
     max_results: int
     timeout_seconds: float
 
     @property
-    def identity(self) -> tuple[str, float]:
-        return self.base_url, self.timeout_seconds
+    def identity(self) -> tuple[str, float, bytes]:
+        return (
+            self.base_url,
+            self.timeout_seconds,
+            hashlib.sha256(self.auth_token.encode("utf-8")).digest(),
+        )
 
 
 class RetrievalRuntimeClient:
@@ -63,7 +71,10 @@ class RetrievalRuntimeClient:
                 connect=min(0.8, config.timeout_seconds),
             ),
             verify=True,
-            headers={"Accept": "application/json"},
+            headers={
+                "Accept": "application/json",
+                "X-Retrieval-Token": config.auth_token,
+            },
             limits=httpx.Limits(max_connections=4, max_keepalive_connections=2),
         )
 
@@ -115,6 +126,25 @@ def _load_config(conn: ConnectionHandler) -> RetrievalPluginConfig:
     }:
         raise ValueError("retrieval runtime host is not allowed")
 
+    auth_token = os.environ.get("RETRIEVAL_AUTH_TOKEN", "").strip()
+    environment_token_file = os.environ.get("RETRIEVAL_AUTH_TOKEN_FILE", "").strip()
+    if auth_token and environment_token_file:
+        raise ValueError("configure only one retrieval auth token source")
+    auth_token_file = (
+        environment_token_file or str(raw.get("auth_token_file", "") or "").strip()
+    )
+    if not auth_token and auth_token_file:
+        try:
+            auth_token = Path(auth_token_file).read_text(encoding="utf-8").strip()
+        except OSError as exc:
+            raise ValueError("retrieval auth token file cannot be read") from exc
+    if len(auth_token) < 32 or auth_token.lower() in {
+        "change-me",
+        "your-auth-token",
+        "placeholder",
+    }:
+        raise ValueError("retrieval auth token is missing or invalid")
+
     configured_domains = raw.get(
         "domains", ["product", "publicKnowledge", "courseCatalog"]
     )
@@ -143,6 +173,7 @@ def _load_config(conn: ConnectionHandler) -> RetrievalPluginConfig:
         raise ValueError("timeout_seconds must be between 0.5 and 10")
     return RetrievalPluginConfig(
         base_url=base_url.rstrip("/"),
+        auth_token=auth_token,
         domains=domains,
         max_results=max_results,
         timeout_seconds=timeout_seconds,

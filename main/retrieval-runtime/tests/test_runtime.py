@@ -16,6 +16,7 @@ def settings(**overrides) -> Settings:
     values = {
         "api_base_url": "https://data.example.test",
         "api_key": "test-api-key-000000000000",
+        "auth_token": "test-retrieval-token-0000000000000000",
         "timeout_seconds": 1.0,
         "connect_timeout_seconds": 0.2,
         "cache_ttl_seconds": 30.0,
@@ -120,7 +121,7 @@ class RuntimeContractTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("secret", result.model_dump_json())
 
     async def test_http_contract_never_accepts_restricted_scope(self):
-        app = create_app(self.service)
+        app = create_app(self.service, auth_token=settings().auth_token)
         transport = httpx.ASGITransport(app=app)
         async with (
             app.router.lifespan_context(app),
@@ -134,8 +135,20 @@ class RuntimeContractTest(unittest.IsolatedAsyncioTestCase):
                     "query": "付费课程",
                     "domains": ["restrictedKnowledge"],
                 },
+                headers={"X-Retrieval-Token": settings().auth_token},
             )
             self.assertEqual(422, response.status_code)
+            unauthorized = await caller.post(
+                "/v1/retrieve",
+                json={"query": "猫粮", "domains": ["product"]},
+            )
+            self.assertEqual(401, unauthorized.status_code)
+            invalid_unauthorized = await caller.post(
+                "/v1/retrieve",
+                content=b"not-json",
+                headers={"Content-Type": "application/json"},
+            )
+            self.assertEqual(401, invalid_unauthorized.status_code)
             health = await caller.get("/healthz")
             ready = await caller.get("/readyz")
             self.assertEqual(200, health.status_code)
@@ -179,6 +192,21 @@ class RuntimeSettingsTest(unittest.TestCase):
                 {
                     "CYJDATA_API_BASE_URL": "https://data.example.test",
                     "CYJDATA_API_KEY": "placeholder",
+                },
+                clear=True,
+            ),
+            self.assertRaises(SettingsError),
+        ):
+            Settings.from_env()
+
+    def test_requires_a_non_placeholder_runtime_auth_token(self):
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "CYJDATA_API_BASE_URL": "https://data.example.test",
+                    "CYJDATA_API_KEY": "test-api-key-000000000000",
+                    "RETRIEVAL_AUTH_TOKEN": "placeholder",
                 },
                 clear=True,
             ),

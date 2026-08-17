@@ -8,6 +8,8 @@ metadata:
 spec:
   replicas: 1
   revisionHistoryLimit: 3
+  # ACK 国内节点首次从 GHCR 拉取可能超过默认 10 分钟；旧副本保持可用。
+  progressDeadlineSeconds: 1200
   selector:
     matchLabels:
       app.kubernetes.io/name: xiaozhi-retrieval-runtime

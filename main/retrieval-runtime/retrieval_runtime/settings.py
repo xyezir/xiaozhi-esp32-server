@@ -11,6 +11,19 @@ class SettingsError(ValueError):
     """Raised when runtime configuration is unsafe or incomplete."""
 
 
+def _read_secret(name: str, file_name: str) -> str:
+    value = os.environ.get(name, "").strip()
+    value_file = os.environ.get(file_name, "").strip()
+    if value and value_file:
+        raise SettingsError(f"configure only one of {name} and {file_name}")
+    if value_file:
+        try:
+            value = Path(value_file).read_text(encoding="utf-8").strip()
+        except OSError as exc:
+            raise SettingsError(f"{file_name} cannot be read") from exc
+    return value
+
+
 def _bounded_float(name: str, default: float, minimum: float, maximum: float) -> float:
     raw = os.environ.get(name, str(default)).strip()
     try:
@@ -54,6 +67,7 @@ def _validate_base_url(value: str, *, allow_insecure_http: bool) -> str:
 class Settings:
     api_base_url: str
     api_key: str
+    auth_token: str
     timeout_seconds: float = 2.8
     connect_timeout_seconds: float = 0.8
     cache_ttl_seconds: float = 30.0
@@ -68,26 +82,24 @@ class Settings:
             os.environ.get("CYJDATA_API_BASE_URL", "https://data-admin.petsengine.cn"),
             allow_insecure_http=allow_insecure,
         )
-        api_key = os.environ.get("CYJDATA_API_KEY", "").strip()
-        api_key_file = os.environ.get("CYJDATA_API_KEY_FILE", "").strip()
-        if api_key and api_key_file:
-            raise SettingsError(
-                "configure only one of CYJDATA_API_KEY and CYJDATA_API_KEY_FILE"
-            )
-        if api_key_file:
-            try:
-                api_key = Path(api_key_file).read_text(encoding="utf-8").strip()
-            except OSError as exc:
-                raise SettingsError("CYJDATA_API_KEY_FILE cannot be read") from exc
+        api_key = _read_secret("CYJDATA_API_KEY", "CYJDATA_API_KEY_FILE")
         if len(api_key) < 16 or api_key.lower() in {
             "change-me",
             "your-api-key",
             "placeholder",
         }:
             raise SettingsError("CYJDATA_API_KEY is missing or invalid")
+        auth_token = _read_secret("RETRIEVAL_AUTH_TOKEN", "RETRIEVAL_AUTH_TOKEN_FILE")
+        if len(auth_token) < 32 or auth_token.lower() in {
+            "change-me",
+            "your-auth-token",
+            "placeholder",
+        }:
+            raise SettingsError("RETRIEVAL_AUTH_TOKEN is missing or invalid")
         return cls(
             api_base_url=base_url,
             api_key=api_key,
+            auth_token=auth_token,
             timeout_seconds=_bounded_float("RETRIEVAL_TIMEOUT_SECONDS", 2.8, 0.5, 10.0),
             connect_timeout_seconds=_bounded_float(
                 "RETRIEVAL_CONNECT_TIMEOUT_SECONDS", 0.8, 0.1, 5.0
