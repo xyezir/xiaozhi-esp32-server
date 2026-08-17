@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, patch
 
 import httpx
 from plugins_func.functions.retrieve_from_cyjdata import (
+    RetrievalRuntimeClient,
     _format_context,
     _load_config,
     close_retrieval_runtime_client,
@@ -103,6 +104,16 @@ class RetrievalRuntimePluginTest(unittest.IsolatedAsyncioTestCase):
 
         with patch.dict(os.environ, {}, clear=True), self.assertRaises(ValueError):
             _load_config(connection())
+
+    def test_client_sends_runtime_token_as_a_header(self):
+        config = _load_config(connection())
+        with patch(
+            "plugins_func.functions.retrieve_from_cyjdata.httpx.AsyncClient"
+        ) as client_factory:
+            RetrievalRuntimeClient(config)
+
+        headers = client_factory.call_args.kwargs["headers"]
+        self.assertEqual(config.auth_token, headers["X-Retrieval-Token"])
 
     def test_context_without_results_is_explicit(self):
         context = _format_context(
