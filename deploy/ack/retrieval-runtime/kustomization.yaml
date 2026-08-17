@@ -9,4 +9,4 @@ resources:
 images:
   - name: xiaozhi-retrieval-runtime
     newName: ghcr.io/xyezir/xiaozhi-esp32-server
-    newTag: retrieval_1ba6bb920449a7713628aba4acd662414b1b9143
+    newTag: retrieval_48f1757a935999a5ab36f86bb72b22d8de18f06a

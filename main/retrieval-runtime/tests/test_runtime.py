@@ -143,6 +143,12 @@ class RuntimeContractTest(unittest.IsolatedAsyncioTestCase):
                 json={"query": "猫粮", "domains": ["product"]},
             )
             self.assertEqual(401, unauthorized.status_code)
+            invalid_unauthorized = await caller.post(
+                "/v1/retrieve",
+                content=b"not-json",
+                headers={"Content-Type": "application/json"},
+            )
+            self.assertEqual(401, invalid_unauthorized.status_code)
             health = await caller.get("/healthz")
             ready = await caller.get("/readyz")
             self.assertEqual(200, health.status_code)

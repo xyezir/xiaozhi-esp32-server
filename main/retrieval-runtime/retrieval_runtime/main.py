@@ -5,6 +5,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 
 from .models import RetrieveRequest, RetrieveResponse
 from .service import RetrievalService
@@ -50,6 +51,17 @@ def create_app(
         lifespan=lifespan,
     )
 
+    @app.middleware("http")
+    async def authenticate_retrieval(request: Request, call_next):
+        if request.url.path == "/v1/retrieve":
+            expected_token = getattr(request.app.state, "retrieval_auth_token", "")
+            provided_token = request.headers.get("X-Retrieval-Token", "")
+            if not provided_token or not hmac.compare_digest(
+                provided_token, expected_token
+            ):
+                return JSONResponse(status_code=401, content={"detail": "unauthorized"})
+        return await call_next(request)
+
     @app.get("/healthz")
     async def healthz() -> dict[str, str]:
         return {"status": "ok"}
@@ -65,12 +77,6 @@ def create_app(
         active_service = getattr(request.app.state, "retrieval_service", None)
         if active_service is None:
             raise HTTPException(status_code=503, detail="not ready")
-        expected_token = getattr(request.app.state, "retrieval_auth_token", "")
-        provided_token = request.headers.get("X-Retrieval-Token", "")
-        if not provided_token or not hmac.compare_digest(
-            provided_token, expected_token
-        ):
-            raise HTTPException(status_code=401, detail="unauthorized")
         return await active_service.retrieve(body)
 
     return app
