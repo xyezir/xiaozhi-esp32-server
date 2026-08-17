@@ -99,8 +99,13 @@ async def get_private_config_from_api(config, device_id, client_id):
         raise agent_result
     if isinstance(agent_result, DeviceBindException):
         raise agent_result
+    if isinstance(agent_result, Exception):
+        raise agent_result
 
-    private_config = agent_result if not isinstance(agent_result, Exception) else {}
+    if not isinstance(agent_result, Mapping):
+        raise RuntimeError("manager API returned an invalid agent configuration")
+
+    private_config = dict(agent_result)
     if correct_words:
         private_config["correct_words"] = correct_words
     return private_config

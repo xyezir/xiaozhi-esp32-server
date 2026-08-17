@@ -95,6 +95,10 @@ class ConnectionHandler:
 
         self.need_bind = False  # 是否需要绑定设备
         self.bind_completed_event = asyncio.Event()
+        self.components_ready_event = asyncio.Event()
+        self.initialization_failed = False
+        self.background_init_task = None
+        self.component_init_future = None
         self.bind_code = None  # 绑定设备的验证码
         self.last_bind_prompt_time = 0  # 上次播放绑定提示的时间戳(秒)
         self.bind_prompt_interval = 60  # 绑定提示播放间隔(秒)
@@ -184,6 +188,10 @@ class ConnectionHandler:
         self.timeout_seconds = (
                 int(self.config.get("close_connection_no_voice_time", 120)) + 60
         )  # 在原来第一道关闭的基础上加60秒，进行二道关闭
+        self.initialization_timeout_seconds = max(
+            30,
+            int(self.config.get("component_initialization_timeout", 300)),
+        )
         self.timeout_task = None
 
         # {"mcp":true} 表示启用MCP功能
@@ -246,7 +254,9 @@ class ConnectionHandler:
             self.logger.bind(tag=TAG).info(f"配置输出音频采样率为: {self.sample_rate}")
 
             # 在后台初始化配置和组件（完全不阻塞主循环）
-            asyncio.create_task(self._background_initialize())
+            self.background_init_task = asyncio.create_task(
+                self._background_initialize()
+            )
 
             try:
                 async for message in self.websocket:
@@ -332,26 +342,52 @@ class ConnectionHandler:
 
     async def _discard_message_with_bind_prompt(self):
         """丢弃消息并检查是否需要播放绑定提示"""
+        # A slow manager lookup is not evidence that a device is unbound.  In
+        # particular, never schedule the "version not found" prompt while the
+        # private configuration request is still in flight.
+        if not self.bind_completed_event.is_set() or not self.need_bind:
+            return
+
         current_time = time.time()
         # 检查是否需要播放绑定提示
         if current_time - self.last_bind_prompt_time >= self.bind_prompt_interval:
-            self.last_bind_prompt_time = current_time
             # 复用现有的绑定提示逻辑
             from core.handle.receiveAudioHandle import check_bind_device
 
-            asyncio.create_task(check_bind_device(self))
+            if await check_bind_device(self):
+                self.last_bind_prompt_time = current_time
 
     async def _route_message(self, message):
         """消息路由"""
-        # 检查是否已经获取到真实的绑定状态
-        if not self.bind_completed_event.is_set():
-            # 还没有获取到真实状态，等待直到获取到真实状态或超时
+        # The protocol hello must never wait for manager or model startup.  It
+        # establishes the session and gives the client a deterministic welcome
+        # response while the remaining components initialize in parallel.
+        if isinstance(message, str):
             try:
-                await asyncio.wait_for(self.bind_completed_event.wait(), timeout=1)
-            except asyncio.TimeoutError:
-                # 超时仍未获取到真实状态，丢弃消息
-                await self._discard_message_with_bind_prompt()
+                parsed_message = json.loads(message)
+            except json.JSONDecodeError:
+                parsed_message = None
+            if (
+                isinstance(parsed_message, dict)
+                and parsed_message.get("type") == "hello"
+            ):
+                await handleTextMessage(self, message)
                 return
+
+        # Listen/control/audio messages require fully initialized providers,
+        # not merely a completed manager binding lookup.
+        if not self.components_ready_event.is_set():
+            # The manager client owns the request timeout and retry budget.
+            # Do not repeatedly terminate an otherwise healthy initialization
+            # just because a listen/audio frame arrived early.
+            await self.components_ready_event.wait()
+
+        if self.initialization_failed:
+            await self.websocket.close(
+                code=1011,
+                reason="device initialization failed",
+            )
+            return
 
         # 已经获取到真实状态，检查是否需要绑定
         if self.need_bind:
@@ -599,17 +635,37 @@ class ConnectionHandler:
                 )
             )
 
-    def _initialize_components(self):
+    def _prepare_components(self):
+        """Build provider candidates without mutating the live connection."""
         try:
-            if self.tts is None:
-                self.tts = self._initialize_tts()
-            # 打开语音合成通道
-            asyncio.run_coroutine_threadsafe(
-                self.tts.open_audio_channels(self), self.loop
-            )
+            if self.stop_event.is_set():
+                raise RuntimeError("connection closed during initialization")
+            tts = self.tts if self.tts is not None else self._initialize_tts()
+            if self.stop_event.is_set():
+                raise RuntimeError("connection closed during initialization")
             if self.need_bind:
-                self.bind_completed_event.set()
+                return {"tts": tts}
+
+            vad = self.vad if self.vad is not None else self._vad
+            asr = self.asr if self.asr is not None else self._initialize_asr()
+            if self.stop_event.is_set():
+                raise RuntimeError("connection closed during initialization")
+            return {"tts": tts, "vad": vad, "asr": asr}
+        except Exception as e:
+            self.logger.bind(tag=TAG).error(f"准备组件失败: {e}")
+            raise
+
+    def _activate_components(self, components):
+        """Commit prepared providers, then finish connection-local setup."""
+        try:
+            if self.stop_event.is_set():
+                raise RuntimeError("connection closed during initialization")
+            self.tts = components["tts"]
+            if self.need_bind:
                 return
+
+            self.vad = components["vad"]
+            self.asr = components["asr"]
             self.selected_module_str = build_module_string(
                 self.config.get("selected_module", {})
             )
@@ -625,19 +681,8 @@ class ConnectionHandler:
                     f"快速初始化组件: prompt成功 {prompt[:50]}..."
                 )
 
-            """初始化本地组件"""
-            if self.vad is None:
-                self.vad = self._vad
-            if self.asr is None:
-                self.asr = self._initialize_asr()
-
             # 初始化声纹识别
             self._initialize_voiceprint()
-            # 打开语音识别通道
-            asyncio.run_coroutine_threadsafe(
-                self.asr.open_audio_channels(self), self.loop
-            )
-
             """加载记忆"""
             self._initialize_memory()
             """加载意图识别"""
@@ -650,7 +695,8 @@ class ConnectionHandler:
             self._inject_tool_call_fewshot()
 
         except Exception as e:
-            self.logger.bind(tag=TAG).error(f"实例化组件失败: {e}")
+            self.logger.bind(tag=TAG).error(f"激活组件失败: {e}")
+            raise
 
     def _init_prompt_enhancement(self):
 
@@ -786,12 +832,54 @@ class ConnectionHandler:
     async def _background_initialize(self):
         """在后台初始化配置和组件（完全不阻塞主循环）"""
         try:
-            # 异步获取差异化配置
-            await self._initialize_private_config_async()
-            # 在线程池中初始化组件
-            self.executor.submit(self._initialize_components)
+            await asyncio.wait_for(
+                self._initialize_until_ready(),
+                timeout=self.initialization_timeout_seconds,
+            )
+        except asyncio.CancelledError:
+            self.initialization_failed = True
+            self.components_ready_event.set()
+            raise
+        except asyncio.TimeoutError:
+            self.initialization_failed = True
+            self.components_ready_event.set()
+            self.logger.bind(tag=TAG).error("后台初始化超过全局截止时间")
+            if self.websocket is not None:
+                await self.websocket.close(
+                    code=1011,
+                    reason="device initialization timed out",
+                )
         except Exception as e:
+            self.initialization_failed = True
+            self.components_ready_event.set()
             self.logger.bind(tag=TAG).error(f"后台初始化失败: {e}")
+            if self.websocket is not None:
+                await self.websocket.close(
+                    code=1011,
+                    reason="device initialization failed",
+                )
+
+    async def _initialize_until_ready(self):
+        # The manager client owns its request timeout and retry budget; this
+        # outer operation owns the deadline for the complete initialization.
+        await self._initialize_private_config_async()
+        self.component_init_future = self.loop.run_in_executor(
+            self.executor,
+            self._prepare_components,
+        )
+        components = await asyncio.shield(self.component_init_future)
+        self.component_init_future = None
+
+        if self.stop_event.is_set():
+            raise RuntimeError("connection closed during initialization")
+        self._activate_components(components)
+
+        # Provider channel setup belongs to the event loop.  Only publish
+        # readiness after both channels have opened successfully.
+        await self.tts.open_audio_channels(self)
+        if not self.need_bind:
+            await self.asr.open_audio_channels(self)
+        self.components_ready_event.set()
 
     async def _initialize_private_config_async(self):
         """从接口异步获取差异化配置（异步版本，不阻塞主循环）"""
@@ -814,15 +902,16 @@ class ConnectionHandler:
             self.bind_completed_event.set()
         except DeviceNotFoundException as e:
             self.need_bind = True
+            self.bind_completed_event.set()
             private_config = {}
         except DeviceBindException as e:
             self.need_bind = True
             self.bind_code = e.bind_code
+            self.bind_completed_event.set()
             private_config = {}
         except Exception as e:
-            self.need_bind = True
             self.logger.bind(tag=TAG).error(f"异步获取差异化配置失败: {e}")
-            private_config = {}
+            raise
 
         init_llm, init_tts, init_memory, init_intent = (
             False,
@@ -937,7 +1026,7 @@ class ConnectionHandler:
             )
         except Exception as e:
             self.logger.bind(tag=TAG).error(f"初始化组件失败: {e}")
-            modules = {}
+            raise
         if modules.get("tts", None) is not None:
             self.tts = modules["tts"]
         if modules.get("vad", None) is not None:
@@ -1538,6 +1627,34 @@ class ConnectionHandler:
     async def close(self, ws=None):
         """资源清理方法"""
         try:
+            if self.stop_event:
+                self.stop_event.set()
+
+            # Stop initialization before providers and queues are released.
+            background_task = getattr(self, "background_init_task", None)
+            if (
+                background_task is not None
+                and background_task is not asyncio.current_task()
+                and not background_task.done()
+            ):
+                background_task.cancel()
+                try:
+                    await background_task
+                except asyncio.CancelledError:
+                    pass
+            self.background_init_task = None
+
+            # Cancelling a task does not stop work already running in an
+            # executor thread. Candidate construction is isolated from the
+            # live connection, so observe its eventual result without making
+            # connection shutdown wait forever.
+            component_future = getattr(self, "component_init_future", None)
+            if component_future is not None and not component_future.done():
+                component_future.add_done_callback(
+                    self._observe_abandoned_component_future
+                )
+            self.component_init_future = None
+
             # 清理 VAD 连接资源
             if (
                     hasattr(self, "vad")
@@ -1558,7 +1675,11 @@ class ConnectionHandler:
                 self.audio_buffer.clear()
 
             # 取消超时任务
-            if self.timeout_task and not self.timeout_task.done():
+            if (
+                self.timeout_task
+                and self.timeout_task is not asyncio.current_task()
+                and not self.timeout_task.done()
+            ):
                 self.timeout_task.cancel()
                 try:
                     await self.timeout_task
@@ -1653,6 +1774,24 @@ class ConnectionHandler:
             # 确保停止事件被设置
             if self.stop_event:
                 self.stop_event.set()
+            # Closing the socket is a terminal invariant; earlier cleanup
+            # failures must not leave the connection task permanently blocked.
+            target_ws = ws or self.websocket
+            if target_ws is not None:
+                try:
+                    await target_ws.close()
+                except Exception:
+                    pass
+
+    def _observe_abandoned_component_future(self, future):
+        try:
+            future.result()
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            self.logger.bind(tag=TAG).warning(
+                f"已放弃的组件准备任务结束: {type(e).__name__}"
+            )
 
     def clear_queues(self):
         """清空所有任务队列"""
