@@ -1,6 +1,7 @@
 """统一工具处理器"""
 
 import json
+from copy import deepcopy
 from typing import Dict, List, Any, Optional
 from config.logger import setup_logging
 from plugins_func.loadplugins import auto_import_modules
@@ -18,6 +19,42 @@ from core.handle.sendAudioHandle import send_display_message
 
 class UnifiedToolHandler:
     """统一工具处理器"""
+
+    _RAG_FIRST_ROLE_ID = "pet_expert_shilang"
+    _RAG_TOOL_NAME = "retrieve_from_cyjdata"
+    _WEB_SEARCH_TOOL_NAMES = frozenset({"bailian_web_search"})
+    _WEB_AUTHORIZATION_PHRASES = (
+        "联网查",
+        "联网搜索",
+        "上网查",
+        "网上查",
+        "互联网查",
+        "搜索互联网",
+        "搜索网页",
+        "网络搜索",
+        "可以联网",
+        "允许联网",
+        "同意联网",
+        "确认联网",
+    )
+    _WEB_NEGATION_PHRASES = (
+        "不要联网",
+        "别联网",
+        "无需联网",
+        "不允许联网",
+        "不要上网",
+        "别上网",
+        "不要网上查",
+    )
+    _AFFIRMATIVE_REPLIES = frozenset(
+        {"可以", "可以的", "好", "好的", "行", "同意", "确认", "查吧", "去查吧"}
+    )
+    _RAG_INSUFFICIENT_MARKERS = (
+        "没有找到足够可靠的资料",
+        "现有资料不足以可靠回答",
+        "内部检索暂时不可用",
+        "检索问题过短",
+    )
 
     def __init__(self, conn):
         self.conn = conn
@@ -53,6 +90,10 @@ class UnifiedToolHandler:
 
         # 初始化标志
         self.finish_init = False
+        self._pending_web_search_question: Optional[str] = None
+        self._web_search_blocked_turn_id: Optional[str] = None
+        self._rag_result_turn_id: Optional[str] = None
+        self._rag_result: Optional[ActionResponse] = None
 
     async def _initialize(self):
         """异步初始化"""
@@ -119,7 +160,140 @@ class UnifiedToolHandler:
 
     def get_functions(self) -> List[Dict[str, Any]]:
         """获取所有工具的函数描述"""
-        return self.tool_manager.get_function_descriptions()
+        functions = self.tool_manager.get_function_descriptions()
+        if not self._rag_first_policy_enabled():
+            return functions
+
+        routed_functions = deepcopy(functions)
+        for tool in routed_functions:
+            function = tool.get("function", {})
+            name = function.get("name")
+            description = str(function.get("description") or "")
+            if name == self._RAG_TOOL_NAME:
+                function["description"] = (
+                    "四郎的首选检索工具。凡涉及商品、品牌、企业、展会、行业资料、"
+                    "专业知识或自有语料，必须先调用本工具；不得与联网搜索并行调用。"
+                    + description
+                )
+            elif name in self._WEB_SEARCH_TOOL_NAMES:
+                function["description"] = (
+                    "受用户授权约束：只有内部RAG不足、模型自身也无法可靠回答，且已先"
+                    "询问用户并得到明确联网同意后才能调用。不得主动或并行调用。"
+                    + description
+                )
+        return routed_functions
+
+    def _rag_first_policy_enabled(self) -> bool:
+        role = self.config.get("role", {}) if isinstance(self.config, dict) else {}
+        return isinstance(role, dict) and role.get("id") == self._RAG_FIRST_ROLE_ID
+
+    def _recent_conversation(self):
+        dialogue = getattr(getattr(self.conn, "dialogue", None), "dialogue", [])
+        return dialogue if isinstance(dialogue, list) else []
+
+    def _last_user_turn(self):
+        return next(
+            (message for message in reversed(self._recent_conversation()) if message.role == "user"),
+            None,
+        )
+
+    def _previous_assistant_text(self, last_user) -> str:
+        if last_user is None:
+            return ""
+        messages = self._recent_conversation()
+        try:
+            user_index = messages.index(last_user)
+        except ValueError:
+            return ""
+        return next(
+            (
+                str(message.content or "")
+                for message in reversed(messages[:user_index])
+                if message.role == "assistant" and message.content
+            ),
+            "",
+        )
+
+    def _web_search_authorized(self, user_text: str, previous_assistant: str) -> bool:
+        normalized = " ".join(user_text.split())
+        if any(phrase in normalized for phrase in self._WEB_NEGATION_PHRASES):
+            return False
+        if any(phrase in normalized for phrase in self._WEB_AUTHORIZATION_PHRASES):
+            return True
+        consent_was_requested = (
+            any(term in previous_assistant for term in ("联网", "互联网", "网上"))
+            and any(
+                term in previous_assistant
+                for term in ("是否", "要不要", "需要我", "允许", "可以")
+            )
+        )
+        return consent_was_requested and normalized in self._AFFIRMATIVE_REPLIES
+
+    @classmethod
+    def _rag_result_is_insufficient(cls, result: ActionResponse) -> bool:
+        if result.action in (Action.ERROR, Action.NOTFOUND):
+            return True
+        text = str(result.result or result.response or "")
+        return not text or any(marker in text for marker in cls._RAG_INSUFFICIENT_MARKERS)
+
+    async def _execute_tool_with_search_policy(
+        self, tool_name: str, arguments: Dict[str, Any]
+    ) -> ActionResponse:
+        if not self._rag_first_policy_enabled():
+            return await self.tool_manager.execute_tool(tool_name, arguments)
+
+        last_user = self._last_user_turn()
+        user_text = str(getattr(last_user, "content", "") or "")
+        turn_id = str(getattr(last_user, "uniq_id", "") or "")
+        if tool_name == self._RAG_TOOL_NAME:
+            result = await self.tool_manager.execute_tool(tool_name, arguments)
+            self._rag_result_turn_id = turn_id
+            self._rag_result = result
+            return result
+        if tool_name not in self._WEB_SEARCH_TOOL_NAMES:
+            return await self.tool_manager.execute_tool(tool_name, arguments)
+
+        previous_assistant = self._previous_assistant_text(last_user)
+        authorized = self._web_search_authorized(user_text, previous_assistant)
+
+        if authorized and self._pending_web_search_question:
+            self._pending_web_search_question = None
+            self._web_search_blocked_turn_id = None
+            return await self.tool_manager.execute_tool(tool_name, arguments)
+
+        if turn_id and self._rag_result_turn_id == turn_id and self._rag_result:
+            rag_result = self._rag_result
+        else:
+            rag_result = await self.tool_manager.execute_tool(
+                self._RAG_TOOL_NAME,
+                {"question": user_text},
+            )
+            self._rag_result_turn_id = turn_id
+            self._rag_result = rag_result
+        if not self._rag_result_is_insufficient(rag_result):
+            self._pending_web_search_question = None
+            self._web_search_blocked_turn_id = None
+            return rag_result
+
+        if authorized:
+            return await self.tool_manager.execute_tool(tool_name, arguments)
+
+        self._pending_web_search_question = user_text
+        if turn_id and self._web_search_blocked_turn_id == turn_id:
+            return ActionResponse(
+                action=Action.RESPONSE,
+                response="内部资料暂时没有找到可靠答案。需要我再联网查询吗？",
+            )
+        self._web_search_blocked_turn_id = turn_id
+        rag_context = str(rag_result.result or rag_result.response or "")
+        return ActionResponse(
+            action=Action.REQLLM,
+            result=(
+                rag_context
+                + "\n【联网规则】当前未获得联网授权。若你凭已有知识也无法可靠回答，"
+                "只询问用户是否允许联网查询，不得调用联网搜索。"
+            ),
+        )
 
     def current_support_functions(self) -> List[str]:
         """获取当前支持的函数名称列表"""
@@ -145,7 +319,7 @@ class UnifiedToolHandler:
             if "function_calls" in function_call_data:
                 responses = []
                 for call in function_call_data["function_calls"]:
-                    result = await self.tool_manager.execute_tool(
+                    result = await self._execute_tool_with_search_policy(
                         call["name"], call.get("arguments", {})
                     )
                     responses.append(result)
@@ -175,7 +349,9 @@ class UnifiedToolHandler:
                 self.logger.warning(f"发送工具调用显示消息失败: {e}")
 
             # 执行工具调用
-            result = await self.tool_manager.execute_tool(function_name, arguments)
+            result = await self._execute_tool_with_search_policy(
+                function_name, arguments
+            )
             return result
 
         except Exception as e:

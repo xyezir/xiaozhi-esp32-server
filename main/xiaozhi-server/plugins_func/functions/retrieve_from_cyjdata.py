@@ -235,6 +235,8 @@ def _format_context(question: str, payload: dict[str, Any]) -> str:
         lines.append(line)
     if accepted == 0:
         lines.append("【检索结果】没有找到足够可靠的资料。")
+    if payload.get("answerable") is False:
+        lines.append("【检索结论】现有资料不足以可靠回答。")
     reasons = payload.get("degradedReasons", [])
     if payload.get("degraded") is True:
         safe_reasons = [

@@ -117,9 +117,16 @@ class RetrievalRuntimePluginTest(unittest.IsolatedAsyncioTestCase):
 
     def test_context_without_results_is_explicit(self):
         context = _format_context(
-            "问题", {"contractVersion": 1, "items": [], "degraded": False}
+            "问题",
+            {
+                "contractVersion": 1,
+                "items": [],
+                "answerable": False,
+                "degraded": False,
+            },
         )
         self.assertIn("没有找到足够可靠的资料", context)
+        self.assertIn("现有资料不足以可靠回答", context)
 
 
 if __name__ == "__main__":
