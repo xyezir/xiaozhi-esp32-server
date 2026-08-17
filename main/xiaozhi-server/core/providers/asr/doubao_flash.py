@@ -44,6 +44,10 @@ class ASRProvider(ASRProviderBase):
         self.enable_itn = self._as_bool(config.get("enable_itn", True))
         self.output_dir = config.get("output_dir", "tmp/")
         self.delete_audio_file = delete_audio_file
+        # A provider instance belongs to one device connection. Reuse its
+        # domestic HTTPS connection across turns so DNS and TLS setup are not
+        # paid again for every utterance.
+        self._http_session = requests.Session()
         os.makedirs(self.output_dir, exist_ok=True)
 
     @staticmethod
@@ -94,7 +98,7 @@ class ASRProvider(ASRProviderBase):
             },
         }
 
-        response = requests.post(
+        response = self._http_session.post(
             self.API_URL,
             headers=headers,
             json=body,
@@ -137,3 +141,6 @@ class ASRProvider(ASRProviderBase):
                 f"豆包极速语音识别失败: {type(exc).__name__}"
             )
         return "", file_path
+
+    async def close(self):
+        self._http_session.close()
