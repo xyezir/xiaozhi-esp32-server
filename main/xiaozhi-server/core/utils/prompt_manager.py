@@ -217,6 +217,19 @@ class PromptManager:
         else:
             conn.loop.call_soon_threadsafe(start_refresh)
 
+    @staticmethod
+    def _legacy_weather_context_enabled(conn: "ConnectionHandler") -> bool:
+        """Return whether the agent explicitly enabled the legacy weather plugin.
+
+        Server MCP weather tools are invoked by the LLM and must not cause the
+        prompt builder to call the unrelated QWeather implementation.
+        """
+        config = getattr(conn, "config", {})
+        if not isinstance(config, dict):
+            return False
+        plugins = config.get("plugins", {})
+        return isinstance(plugins, dict) and "get_weather" in plugins
+
     def update_context_info(self, conn, client_ip: str):
         """同步更新上下文信息"""
         try:
@@ -236,6 +249,7 @@ class PromptManager:
                 self.base_prompt_template
                 and "weather_info" in self.base_prompt_template
                 and local_address
+                and self._legacy_weather_context_enabled(conn)
             ):
                 # Weather is optional context. A slow or invalid provider must
                 # never delay WebSocket readiness or the first voice turn.

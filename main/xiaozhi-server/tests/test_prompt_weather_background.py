@@ -78,6 +78,20 @@ class PromptWeatherBackgroundTest(unittest.IsolatedAsyncioTestCase):
             provider_release.set()
             await asyncio.sleep(0)
 
+    def test_legacy_weather_context_requires_explicit_plugin(self):
+        self.conn.config = {"plugins": {"maps_weather": {}}}
+        self.assertFalse(self.manager._legacy_weather_context_enabled(self.conn))
+
+        self.conn.config = {"plugins": {"get_weather": {}}}
+        self.assertTrue(self.manager._legacy_weather_context_enabled(self.conn))
+
+    def test_legacy_weather_context_rejects_invalid_config(self):
+        self.conn.config = None
+        self.assertFalse(self.manager._legacy_weather_context_enabled(self.conn))
+
+        self.conn.config = {"plugins": []}
+        self.assertFalse(self.manager._legacy_weather_context_enabled(self.conn))
+
 
 if __name__ == "__main__":
     unittest.main()
