@@ -142,13 +142,20 @@ async def max_out_size(conn: "ConnectionHandler"):
 
 
 async def check_bind_device(conn: "ConnectionHandler"):
+    # Binding prompts are consumed by the TTS queues.  Configuration lookup
+    # and component initialization happen concurrently, so fail closed until
+    # those queues exist instead of raising from a background task.
+    if conn.tts is None:
+        conn.logger.bind(tag=TAG).warning("绑定提示等待 TTS 初始化完成")
+        return False
+
     if conn.bind_code:
         # 确保bind_code是6位数字
         if len(conn.bind_code) != 6:
             conn.logger.bind(tag=TAG).error("无效的绑定码格式")
             text = "绑定码格式错误，请检查配置。"
             await send_stt_message(conn, text)
-            return
+            return True
 
         text = f"请登录控制面板，输入{conn.bind_code}，绑定设备。"
         await send_stt_message(conn, text)
@@ -169,6 +176,7 @@ async def check_bind_device(conn: "ConnectionHandler"):
                 conn.logger.bind(tag=TAG).error(f"播放数字音频失败: {e}")
                 continue
         conn.tts.tts_audio_queue.put((SentenceType.LAST, [], None))
+        return True
     else:
         # 播放未绑定提示
         conn.client_abort = False
@@ -177,3 +185,4 @@ async def check_bind_device(conn: "ConnectionHandler"):
         music_path = "config/assets/bind_not_found.wav"
         opus_packets = await audio_to_data(music_path)
         conn.tts.tts_audio_queue.put((SentenceType.LAST, opus_packets, text))
+        return True
