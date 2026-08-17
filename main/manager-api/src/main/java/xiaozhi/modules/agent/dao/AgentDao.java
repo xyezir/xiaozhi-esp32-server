@@ -52,4 +52,7 @@ public interface AgentDao extends BaseDao<AgentEntity> {
      * @return 受影响行数
      */
     int updateSnapshotFields(@Param("agent") AgentEntity agent);
+
+    /** Explicitly writes nullable role wake fields as one database update. */
+    int updateRoleWakeProfile(@Param("agent") AgentEntity agent);
 }

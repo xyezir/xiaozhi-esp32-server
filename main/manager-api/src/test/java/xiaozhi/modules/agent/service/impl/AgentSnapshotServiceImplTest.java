@@ -1142,6 +1142,51 @@ class AgentSnapshotServiceImplTest {
     }
 
     @Test
+    void trainedWakeUpdateExplicitlyClearsDynamicColumns() {
+        AgentDao agentDao = mock(AgentDao.class);
+        AgentContextProviderService contextProviderService = mock(AgentContextProviderService.class);
+        CorrectWordFileService correctWordFileService = mock(CorrectWordFileService.class);
+        AgentSnapshotService snapshotService = mock(AgentSnapshotService.class);
+        AgentServiceImpl service = new AgentServiceImpl(agentDao, null, null, null, null, null, null, null,
+                null, null, contextProviderService, null, correctWordFileService, snapshotService);
+        ReflectionTestUtils.setField(service, "baseDao", agentDao);
+
+        String agentId = "agent-id";
+        AgentEntity lockedAgent = new AgentEntity();
+        lockedAgent.setId(agentId);
+        AgentInfoVO currentAgent = new AgentInfoVO();
+        currentAgent.setId(agentId);
+        currentAgent.setRoleWakeMode("dynamic");
+        currentAgent.setRoleWakeWord("你好四郎");
+        currentAgent.setRoleWakeModel("mn5q8_cn");
+        currentAgent.setRoleWakeCommand("ni hao si lang");
+        currentAgent.setRoleWakeLanguage("cn");
+        currentAgent.setRoleWakeThreshold(new java.math.BigDecimal("0.200"));
+        currentAgent.setRoleWakeConfigVersion(6L);
+        AgentUpdateDTO update = new AgentUpdateDTO();
+        update.setRoleWakeMode("trained");
+        update.setRoleWakeWord("你好小智");
+        update.setRoleWakeModel("wn9_nihaoxiaozhi_tts");
+        update.setRoleWakeConfigVersion(7L);
+
+        when(agentDao.selectByIdForUpdate(agentId)).thenReturn(lockedAgent);
+        when(agentDao.selectAgentInfoById(agentId)).thenReturn(currentAgent);
+        when(contextProviderService.getByAgentId(agentId)).thenReturn(null);
+        when(correctWordFileService.getAgentCorrectWordFileIds(agentId)).thenReturn(List.of());
+        when(agentDao.updateById(any(AgentEntity.class))).thenReturn(1);
+        when(agentDao.updateRoleWakeProfile(any(AgentEntity.class))).thenReturn(1);
+
+        service.updateAgentById(agentId, update, false);
+
+        verify(agentDao).updateRoleWakeProfile(argThat((AgentEntity agent) ->
+                "trained".equals(agent.getRoleWakeMode()) &&
+                "你好小智".equals(agent.getRoleWakeWord()) &&
+                agent.getRoleWakeCommand() == null &&
+                agent.getRoleWakeLanguage() == null &&
+                agent.getRoleWakeThreshold() == null));
+    }
+
+    @Test
     void createAgentPersistsDisplayDefaultsBeforeInitialSnapshot() {
         AgentDao agentDao = mock(AgentDao.class);
         TimbreService timbreService = mock(TimbreService.class);

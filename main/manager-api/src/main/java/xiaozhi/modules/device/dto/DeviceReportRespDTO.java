@@ -60,6 +60,21 @@ public class DeviceReportRespDTO {
         @JsonProperty("wake_model")
         @Schema(description = "资源包内实际 WakeNet 模型标识")
         private String wakeModel;
+        @JsonProperty("wake_mode")
+        @Schema(description = "唤醒模式: trained/dynamic")
+        private String wakeMode;
+        @JsonProperty("wake_command")
+        @Schema(description = "动态唤醒声学命令")
+        private String wakeCommand;
+        @JsonProperty("wake_language")
+        @Schema(description = "动态唤醒语言: cn/en")
+        private String wakeLanguage;
+        @JsonProperty("wake_threshold")
+        @Schema(description = "动态唤醒检测阈值")
+        private java.math.BigDecimal wakeThreshold;
+        @JsonProperty("wake_config_version")
+        @Schema(description = "唤醒配置版本")
+        private Long wakeConfigVersion;
     }
 
     public static DeviceReportRespDTO createError(String message) {

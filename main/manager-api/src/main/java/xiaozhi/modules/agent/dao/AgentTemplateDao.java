@@ -1,6 +1,7 @@
 package xiaozhi.modules.agent.dao;
 
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
@@ -13,5 +14,5 @@ import xiaozhi.modules.agent.entity.AgentTemplateEntity;
  */
 @Mapper
 public interface AgentTemplateDao extends BaseMapper<AgentTemplateEntity> {
-
+    int updateRoleWakeProfile(@Param("template") AgentTemplateEntity template);
 }

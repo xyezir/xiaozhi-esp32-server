@@ -37,6 +37,11 @@
         <result column="roleDistribution" property="roleDistribution"/>
         <result column="roleWakeWord" property="roleWakeWord"/>
         <result column="roleWakeModel" property="roleWakeModel"/>
+        <result column="roleWakeMode" property="roleWakeMode"/>
+        <result column="roleWakeCommand" property="roleWakeCommand"/>
+        <result column="roleWakeLanguage" property="roleWakeLanguage"/>
+        <result column="roleWakeThreshold" property="roleWakeThreshold"/>
+        <result column="roleWakeConfigVersion" property="roleWakeConfigVersion"/>
         <result column="summaryMemory" property="summaryMemory"/>
         <result column="langCode" property="langCode"/>
         <result column="language" property="language"/>
@@ -84,6 +89,11 @@
                a.role_distribution AS roleDistribution,
                a.role_wake_word    AS roleWakeWord,
                a.role_wake_model   AS roleWakeModel,
+               a.role_wake_mode    AS roleWakeMode,
+               a.role_wake_command AS roleWakeCommand,
+               a.role_wake_language AS roleWakeLanguage,
+               a.role_wake_threshold AS roleWakeThreshold,
+               a.role_wake_config_version AS roleWakeConfigVersion,
                a.summary_memory    AS summaryMemory,
                a.lang_code         AS langCode,
                a.language          AS language,
@@ -138,12 +148,29 @@
             role_distribution = #{agent.roleDistribution,jdbcType=VARCHAR},
             role_wake_word = #{agent.roleWakeWord,jdbcType=VARCHAR},
             role_wake_model = #{agent.roleWakeModel,jdbcType=VARCHAR},
+            role_wake_mode = #{agent.roleWakeMode,jdbcType=VARCHAR},
+            role_wake_command = #{agent.roleWakeCommand,jdbcType=VARCHAR},
+            role_wake_language = #{agent.roleWakeLanguage,jdbcType=VARCHAR},
+            role_wake_threshold = #{agent.roleWakeThreshold,jdbcType=DECIMAL},
+            role_wake_config_version = #{agent.roleWakeConfigVersion,jdbcType=BIGINT},
             summary_memory = #{agent.summaryMemory,jdbcType=LONGVARCHAR},
             lang_code = #{agent.langCode,jdbcType=VARCHAR},
             language = #{agent.language,jdbcType=VARCHAR},
             sort = #{agent.sort,jdbcType=INTEGER},
             updater = #{agent.updater,jdbcType=BIGINT},
             updated_at = #{agent.updatedAt,jdbcType=TIMESTAMP}
+        WHERE id = #{agent.id}
+    </update>
+
+    <update id="updateRoleWakeProfile">
+        UPDATE ai_agent
+        SET role_wake_word = #{agent.roleWakeWord,jdbcType=VARCHAR},
+            role_wake_model = #{agent.roleWakeModel,jdbcType=VARCHAR},
+            role_wake_mode = #{agent.roleWakeMode,jdbcType=VARCHAR},
+            role_wake_command = #{agent.roleWakeCommand,jdbcType=VARCHAR},
+            role_wake_language = #{agent.roleWakeLanguage,jdbcType=VARCHAR},
+            role_wake_threshold = #{agent.roleWakeThreshold,jdbcType=DECIMAL},
+            role_wake_config_version = #{agent.roleWakeConfigVersion,jdbcType=BIGINT}
         WHERE id = #{agent.id}
     </update>
 

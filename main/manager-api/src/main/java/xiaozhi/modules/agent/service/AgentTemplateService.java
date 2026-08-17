@@ -39,4 +39,7 @@ public interface AgentTemplateService extends IRepository<AgentTemplateEntity> {
      * @return 下一个可用的排序序号
      */
     Integer getNextAvailableSort();
+
+    /** 完整更新模板，并显式写入可为 null 的角色唤醒字段。 */
+    boolean updateWithWakeProfile(AgentTemplateEntity template);
 }

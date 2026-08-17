@@ -753,3 +753,14 @@ databaseChangeLog:
         - sqlFile:
             encoding: utf8
             path: classpath:db/changelog/202608162230.sql
+  - changeSet:
+      id: 202608171120
+      author: codex
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202608171120.sql
+      rollback:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202608171120.rollback.sql
