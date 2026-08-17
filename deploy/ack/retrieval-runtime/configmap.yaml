@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: xiaozhi-retrieval-runtime
+  labels:
+    app.kubernetes.io/name: xiaozhi-retrieval-runtime
+    app.kubernetes.io/part-of: xiaozhi
+data:
+  CYJDATA_API_BASE_URL: https://data-admin.petsengine.cn
+  CYJDATA_API_KEY_FILE: /run/secrets/cyjdata/api_key
+  RETRIEVAL_TIMEOUT_SECONDS: "2.8"
+  RETRIEVAL_CONNECT_TIMEOUT_SECONDS: "0.8"
+  RETRIEVAL_CACHE_TTL_SECONDS: "30"
+  RETRIEVAL_CACHE_MAX_ENTRIES: "128"

@@ -86,3 +86,28 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             BUILDKIT_PROGRESS=plain
+
+      # Retrieval Runtime 使用仓库 GITHUB_TOKEN 发布，使镜像自动关联当前公开仓库，
+      # 避免把个人 PAT 或生产镜像仓库写凭据复制到 ACK 非生产环境。
+      - name: Login to GHCR for retrieval runtime
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push retrieval runtime
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: main/retrieval-runtime/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:retrieval_${{ github.sha }}
+            ghcr.io/${{ github.repository }}:retrieval_latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha,scope=retrieval-runtime
+          cache-to: type=gha,mode=max,scope=retrieval-runtime

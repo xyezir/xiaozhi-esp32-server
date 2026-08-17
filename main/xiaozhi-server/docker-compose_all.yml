@@ -2,6 +2,33 @@
 
 version: '3'
 services:
+  # 本机检索运行时：只加入 Compose 内网，不发布宿主端口。
+  retrieval-runtime:
+    build:
+      context: ../..
+      dockerfile: main/retrieval-runtime/Dockerfile
+    image: xiaozhi-retrieval-runtime:0.1.0-local
+    container_name: xiaozhi-retrieval-runtime
+    profiles: ["retrieval"]
+    restart: unless-stopped
+    environment:
+      - CYJDATA_API_BASE_URL=${CYJDATA_API_BASE_URL:-https://data-admin.petsengine.cn}
+      - CYJDATA_API_KEY=${CYJDATA_API_KEY:-}
+      - CYJDATA_API_KEY_FILE=${CYJDATA_API_KEY_FILE:-}
+      - RETRIEVAL_TIMEOUT_SECONDS=${RETRIEVAL_TIMEOUT_SECONDS:-2.8}
+      - RETRIEVAL_CONNECT_TIMEOUT_SECONDS=${RETRIEVAL_CONNECT_TIMEOUT_SECONDS:-0.8}
+      - RETRIEVAL_CACHE_TTL_SECONDS=${RETRIEVAL_CACHE_TTL_SECONDS:-30}
+      - RETRIEVAL_CACHE_MAX_ENTRIES=${RETRIEVAL_CACHE_MAX_ENTRIES:-128}
+    expose:
+      - 8090
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; assert urllib.request.urlopen('http://127.0.0.1:8090/readyz', timeout=2).status == 200"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+
   # Server模块
   xiaozhi-esp32-server:
     image: ghcr.nju.edu.cn/xinnan-tech/xiaozhi-esp32-server:server_latest
