@@ -45,6 +45,9 @@ class DoubaoFlashASRTest(unittest.IsolatedAsyncioTestCase):
         os.unlink(self.audio_file.name)
         self.output_dir.cleanup()
 
+    async def asyncTearDown(self):
+        await self.provider.close()
+
     def test_requires_api_key_and_fixed_resource(self):
         with self.assertRaisesRegex(ValueError, "api_key"):
             ASRProvider({"output_dir": self.output_dir.name}, True)
@@ -65,7 +68,7 @@ class DoubaoFlashASRTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_success_uses_new_api_key_contract_and_fixed_endpoint(self):
         with patch(
-            "core.providers.asr.doubao_flash.requests.post",
+            "core.providers.asr.doubao_flash.requests.Session.post",
             return_value=_Response(),
         ) as post:
             text, file_path = await self.provider.speech_to_text(
@@ -85,7 +88,7 @@ class DoubaoFlashASRTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_provider_rejection_returns_empty_without_leaking_key(self):
         with patch(
-            "core.providers.asr.doubao_flash.requests.post",
+            "core.providers.asr.doubao_flash.requests.Session.post",
             return_value=_Response(status_code="45000000"),
         ), patch("core.providers.asr.doubao_flash.logger") as provider_logger:
             result = await self.provider.speech_to_text(
@@ -96,6 +99,11 @@ class DoubaoFlashASRTest(unittest.IsolatedAsyncioTestCase):
         log_call = provider_logger.bind.return_value.error.call_args
         self.assertIsNotNone(log_call)
         self.assertNotIn("new-console-api-key", str(log_call))
+
+    async def test_close_releases_persistent_http_session(self):
+        with patch.object(self.provider._http_session, "close") as close:
+            await self.provider.close()
+        close.assert_called_once_with()
 
     def test_request_timeout_must_be_positive(self):
         with self.assertRaisesRegex(ValueError, "request_timeout"):

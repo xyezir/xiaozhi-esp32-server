@@ -5,7 +5,6 @@
 
 import os
 import asyncio
-import threading
 from typing import Dict, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -70,6 +69,7 @@ class PromptManager:
 
         self.context_provider = ContextDataProvider(config, self.logger)
         self.context_data = {}
+        self._weather_refresh_inflight = set()
 
         self._load_base_template()
 
@@ -163,50 +163,59 @@ class PromptManager:
             self.logger.bind(tag=TAG).error(f"获取位置信息失败: {e}")
             return "未知位置"
 
-    def _get_weather_info(self, conn: "ConnectionHandler", location: str) -> str:
-        """获取天气信息"""
+    async def _refresh_weather_info(
+        self, conn: "ConnectionHandler", location: str
+    ) -> None:
+        """Refresh weather without delaying connection or first-turn readiness."""
         try:
-            # 先从缓存获取
             cached_weather = self.cache_manager.get(self.CacheType.WEATHER, location)
             if cached_weather is not None:
-                return cached_weather
+                return
 
-            # 缓存未命中，调用 async get_weather 函数
-            # Windows ProactorEventLoop 不支持 run_coroutine_threadsafe().result()
-            # 因此用 call_soon_threadsafe 提交任务 + threading.Event 等待结果
-            # 注意：Event.wait() 只阻塞当前线程池线程，不阻塞主事件循环
             from plugins_func.functions.get_weather import get_weather
             from plugins_func.register import ActionResponse
 
-            result_holder = []
-            exception_holder = []
-
-            async def _call():
-                try:
-                    result_holder.append(
-                        await get_weather(conn, location=location, lang="zh_CN")
-                    )
-                except Exception as e:
-                    exception_holder.append(e)
-                finally:
-                    event.set()
-
-            event = threading.Event()
-            conn.loop.call_soon_threadsafe(lambda: asyncio.ensure_future(_call()))
-            if not event.wait(timeout=10):
-                raise TimeoutError("获取天气信息超时")
-            if exception_holder:
-                raise exception_holder[0]
-            result = result_holder[0]
+            result = await asyncio.wait_for(
+                get_weather(conn, location=location, lang="zh_CN"),
+                timeout=10,
+            )
             if isinstance(result, ActionResponse):
-                weather_report = result.result
-                self.cache_manager.set(self.CacheType.WEATHER, location, weather_report)
-                return weather_report
-            return "天气信息获取失败"
+                self.cache_manager.set(
+                    self.CacheType.WEATHER,
+                    location,
+                    result.result,
+                )
 
         except Exception as e:
-            self.logger.bind(tag=TAG).error(f"获取天气信息失败: {e}")
-            return "天气信息获取失败"
+            # Provider errors can carry request metadata. Log only the type.
+            self.logger.bind(tag=TAG).warning(
+                f"后台天气信息刷新失败: {type(e).__name__}"
+            )
+        finally:
+            self._weather_refresh_inflight.discard(location)
+
+    def _schedule_weather_refresh(
+        self, conn: "ConnectionHandler", location: str
+    ) -> None:
+        """Schedule one refresh per location and always return immediately."""
+        if self.cache_manager.get(self.CacheType.WEATHER, location) is not None:
+            return
+
+        def start_refresh():
+            if location in self._weather_refresh_inflight:
+                return
+            self._weather_refresh_inflight.add(location)
+            asyncio.create_task(self._refresh_weather_info(conn, location))
+
+        try:
+            running_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            running_loop = None
+
+        if running_loop is conn.loop:
+            start_refresh()
+        else:
+            conn.loop.call_soon_threadsafe(start_refresh)
 
     def update_context_info(self, conn, client_ip: str):
         """同步更新上下文信息"""
@@ -228,8 +237,9 @@ class PromptManager:
                 and "weather_info" in self.base_prompt_template
                 and local_address
             ):
-                # 获取天气信息（使用全局缓存）
-                self._get_weather_info(conn, local_address)
+                # Weather is optional context. A slow or invalid provider must
+                # never delay WebSocket readiness or the first voice turn.
+                self._schedule_weather_refresh(conn, local_address)
 
             # 获取配置的上下文数据
             if hasattr(conn, "device_id") and conn.device_id:
