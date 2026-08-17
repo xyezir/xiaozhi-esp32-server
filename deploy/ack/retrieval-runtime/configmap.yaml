@@ -8,6 +8,7 @@ metadata:
 data:
   CYJDATA_API_BASE_URL: https://data-admin.petsengine.cn
   CYJDATA_API_KEY_FILE: /run/secrets/cyjdata/api_key
+  RETRIEVAL_AUTH_TOKEN_FILE: /run/secrets/cyjdata/auth_token
   RETRIEVAL_TIMEOUT_SECONDS: "2.8"
   RETRIEVAL_CONNECT_TIMEOUT_SECONDS: "0.8"
   RETRIEVAL_CACHE_TTL_SECONDS: "30"

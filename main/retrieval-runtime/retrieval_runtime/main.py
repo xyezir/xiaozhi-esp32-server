@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import logging
 from contextlib import asynccontextmanager
 
@@ -13,7 +14,11 @@ from .upstream import CyjdataClient
 LOG = logging.getLogger("retrieval-runtime")
 
 
-def create_app(service: RetrievalService | None = None) -> FastAPI:
+def create_app(
+    service: RetrievalService | None = None,
+    *,
+    auth_token: str | None = None,
+) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         active_service = service
@@ -24,7 +29,13 @@ def create_app(service: RetrievalService | None = None) -> FastAPI:
                 LOG.error("retrieval runtime configuration is invalid")
                 raise
             active_service = RetrievalService(settings, CyjdataClient(settings))
+            active_auth_token = settings.auth_token
+        else:
+            active_auth_token = auth_token
+        if not active_auth_token:
+            raise SettingsError("retrieval runtime auth token is missing")
         app.state.retrieval_service = active_service
+        app.state.retrieval_auth_token = active_auth_token
         try:
             yield
         finally:
@@ -54,6 +65,12 @@ def create_app(service: RetrievalService | None = None) -> FastAPI:
         active_service = getattr(request.app.state, "retrieval_service", None)
         if active_service is None:
             raise HTTPException(status_code=503, detail="not ready")
+        expected_token = getattr(request.app.state, "retrieval_auth_token", "")
+        provided_token = request.headers.get("X-Retrieval-Token", "")
+        if not provided_token or not hmac.compare_digest(
+            provided_token, expected_token
+        ):
+            raise HTTPException(status_code=401, detail="unauthorized")
         return await active_service.retrieve(body)
 
     return app
