@@ -7,6 +7,11 @@ from urllib.parse import urlsplit
 PUBLIC_CACHE = "public, max-age=31536000, immutable"
 FILE_SETS = {
     "public-assets": {
+        "/pet_expert_shilang-2026.08.18.2.bin": (
+            Path("/roles/pet_expert_shilang-2026.08.18.2.bin"),
+            "application/octet-stream",
+            PUBLIC_CACHE,
+        ),
         "/pet_expert_shilang-2026.08.18.1.bin": (
             Path("/roles/pet_expert_shilang-2026.08.18.1.bin"),
             "application/octet-stream",
