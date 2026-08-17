@@ -228,6 +228,17 @@ class UnifiedToolHandler:
     async def cleanup(self):
         """清理资源"""
         try:
+            try:
+                from plugins_func.functions.retrieve_from_cyjdata import (
+                    close_retrieval_runtime_client,
+                )
+
+                await close_retrieval_runtime_client(self.conn)
+            except ImportError:
+                pass
+            except Exception:
+                self.logger.warning("清理检索客户端失败")
+
             await self.server_mcp_executor.cleanup()
 
             # 清理MCP接入点连接

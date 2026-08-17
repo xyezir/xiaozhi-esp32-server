@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: xiaozhi-retrieval-runtime
+  labels:
+    app.kubernetes.io/name: xiaozhi-retrieval-runtime
+    app.kubernetes.io/part-of: xiaozhi
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: xiaozhi-retrieval-runtime
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: xiaozhi-retrieval-runtime
+        app.kubernetes.io/part-of: xiaozhi
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: runtime
+          image: xiaozhi-retrieval-runtime
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: xiaozhi-retrieval-runtime
+          ports:
+            - name: http
+              containerPort: 8090
+              protocol: TCP
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: api-key
+              mountPath: /run/secrets/cyjdata
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+      volumes:
+        - name: api-key
+          secret:
+            secretName: cyjdata-retrieval-api-key
+            defaultMode: 0440
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
