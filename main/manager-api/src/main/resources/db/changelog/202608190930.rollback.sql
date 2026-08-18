@@ -1,0 +1,6 @@
+-- Restore the prompts captured before 202608190930 was applied.
+-- The exact rollback snapshot is kept outside the repository at
+-- /home/luban/migration/shilang-role-definition-before-20260819/rollback.sql.
+-- Liquibase rollback is intentionally a no-op here: restoring a historical
+-- prompt must use that immutable, environment-specific snapshot rather than
+-- overwrite a newer user edit.
