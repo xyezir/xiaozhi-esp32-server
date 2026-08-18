@@ -25,6 +25,7 @@ class RoleFileServiceTest(TestCase):
         self.assertEqual(
             set(module.FILES),
             {
+                "/pet_expert_shilang-2026.08.18.4.bin",
                 "/pet_expert_shilang-2026.08.18.3.bin",
                 "/pet_expert_shilang-2026.08.18.2.bin",
                 "/pet_expert_shilang-2026.08.18.1.bin",
