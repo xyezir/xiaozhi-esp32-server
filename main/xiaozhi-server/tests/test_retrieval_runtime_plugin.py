@@ -111,8 +111,8 @@ class RetrievalRuntimePluginTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(Action.RESPONSE, response.action)
         self.assertIsNone(response.result)
-        self.assertIn("N1C51、N5F51", response.response)
-        self.assertIn("N4K61", response.response)
+        self.assertIn("烟台中宠食品股份有限公司：2026 亚宠展；展馆：N1馆、N5馆；展位：N1C51、N5F51", response.response)
+        self.assertIn("浙江中宠科技发展有限公司：2026 亚宠展；展馆：N4馆；展位：N4K61", response.response)
         self.assertIn("多个匹配结果", response.response)
 
     def test_pfa_fast_path_rejects_general_or_mixed_results(self):

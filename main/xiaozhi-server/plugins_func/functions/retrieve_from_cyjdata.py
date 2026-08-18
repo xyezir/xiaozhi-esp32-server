@@ -255,11 +255,14 @@ _PFA_BOOTH_PATTERN = re.compile(r"(?:展位|展台|摊位)[：:]\s*([^；;，。
 
 
 def _format_pfa_booth_answer(question: str, payload: dict[str, Any]) -> str | None:
-    """Return an exact short answer for authoritative PFA booth records.
+    """Return a complete, readable answer for authoritative PFA booth records.
 
     These records come from the structured exhibitor projection rather than
-    free-form documents.  Skipping a second LLM pass lowers voice latency and
+    free-form documents. Skipping a second LLM pass lowers voice latency and
     also prevents the model from merging companies that share a brand name.
+    Keep the event, hall and booth labels in the subtitle instead of returning
+    a bare booth-code abbreviation; the original booth code itself remains
+    unchanged for exact lookup and navigation.
     """
     if not any(marker in question for marker in _PFA_BOOTH_QUERY_MARKERS):
         return None
@@ -278,18 +281,19 @@ def _format_pfa_booth_answer(question: str, payload: dict[str, Any]) -> str | No
             return None
         title = _clean_text(item.get("title"), 120)
         summary = _clean_text(item.get("summary"), 800)
-        booth_match = _PFA_BOOTH_PATTERN.search(summary)
-        if not title or booth_match is None:
+        if not title or not summary:
             return None
-        booths = _clean_text(booth_match.group(1), 160)
-        if not booths:
+        if not _PFA_BOOTH_PATTERN.search(summary):
             return None
-        answers.append(f"{title}的展位是{booths}")
+        # The structured summary is authoritative and already contains the
+        # original event, hall and booth labels. Preserve it verbatim so the
+        # voice and circular caption receive the same complete answer.
+        answers.append(f"{title}：{summary}")
 
     if not answers:
         return None
     prefix = "查到多个匹配结果：" if len(answers) > 1 else "查到了："
-    return (prefix + "；".join(answers) + "。")[:1200]
+    return (prefix + "；".join(answers) + "。")[:2400]
 
 
 @register_function(
