@@ -443,6 +443,8 @@ ASR:
     # 开通地址：https://console.volcengine.com/speech/service/10038
     # 价格更为便宜，建议在高并发场景下使用
     type: doubao_stream
+    # 新版豆包语音控制台可直接使用 API Key；旧版仍兼容 appid/access_token
+    api_key: 你的豆包语音API Key
     appid: 你的火山引擎语音合成服务appid
     access_token: 你的火山引擎语音合成服务access_token
     # 资源ID：小时版 volc.seedasr.sauc.duration，并发版 volc.seedasr.sauc.concurrent

@@ -32,8 +32,9 @@ class ASRProvider(ASRProviderBase):
         self._retry_after = 0.0
 
         # 配置参数
-        self.appid = str(config.get("appid"))
-        self.access_token = config.get("access_token")
+        self.api_key = str(config.get("api_key") or "")
+        self.appid = str(config.get("appid") or "")
+        self.access_token = str(config.get("access_token") or "")
         # 资源ID，用于区分不同的ASR模型（默认1.0模型小时版，v2版本使用seed-asr）
         self.resource_id = config.get("resource_id", "volc.bigasr.sauc.duration")
 
@@ -358,6 +359,12 @@ class ASRProvider(ASRProviderBase):
         return req
 
     def token_auth(self):
+        if self.api_key:
+            return {
+                "X-Api-Key": self.api_key,
+                "X-Api-Resource-Id": self.resource_id,
+                "X-Api-Connect-Id": str(uuid.uuid4()),
+            }
         return {
             "X-Api-App-Key": self.appid,
             "X-Api-Access-Key": self.access_token,
