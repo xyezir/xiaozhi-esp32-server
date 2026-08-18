@@ -25,6 +25,12 @@ _SAFE_METADATA_FIELDS = (
     "resourceId",
 )
 _REASON_CODE = re.compile(r"^[A-Za-z0-9_:-]{1,100}$")
+_PFA_INTENT = re.compile(r"(?:亚宠展|亚洲宠物展|展位|展馆|参展)")
+_PFA_NOISE = re.compile(
+    r"(?:20\d{2}年?|第[一二三四五六七八九十\d]+届|亚洲宠物展览会|亚洲宠物展|"
+    r"亚宠展|展位号码?|展位号|展位|展馆|参展商|参展|品牌|公司|今年|本届|"
+    r"哪个|哪一个|哪里|在哪(?:里)?|几号|查询|查一下|查|请问|告诉我|的|在)"
+)
 
 
 def _limited_text(value: Any, maximum: int) -> str:
@@ -143,6 +149,56 @@ def _knowledge_item(item: Any, kind: str = "knowledge") -> RetrievalItem | None:
     )
 
 
+def _pfa_keyword(query: str) -> str | None:
+    if not _PFA_INTENT.search(query):
+        return None
+    keyword = _PFA_NOISE.sub(" ", query)
+    keyword = re.sub(r"[，。！？、,.;；:：?？!！()（）\[\]【】]", " ", keyword)
+    keyword = " ".join(keyword.split()).strip()
+    return keyword[:100] or None
+
+
+def _pfa_item(item: Any) -> RetrievalItem | None:
+    if not isinstance(item, dict):
+        return None
+    company = _limited_text(item.get("display_name"), 200)
+    brands = [
+        _limited_text(value, 100)
+        for value in _items(item.get("brands"))
+        if _limited_text(value, 100)
+    ]
+    halls = [
+        _limited_text(value, 40)
+        for value in _items(item.get("halls"))
+        if _limited_text(value, 40)
+    ]
+    booths = [
+        _limited_text(value, 40)
+        for value in _items(item.get("booths"))
+        if _limited_text(value, 40)
+    ]
+    if not company or not booths:
+        return None
+    summary_parts = ["2026 亚宠展"]
+    if brands:
+        summary_parts.append(f"品牌：{'、'.join(brands)}")
+    if halls:
+        summary_parts.append(f"展馆：{'、'.join(halls)}")
+    summary_parts.append(f"展位：{'、'.join(booths)}")
+    category = _limited_text(item.get("category_primary"), 100)
+    if category:
+        summary_parts.append(f"品类：{category}")
+    key = _limited_text(item.get("canonical_company_key"), 200)
+    return RetrievalItem(
+        kind="knowledge",
+        title=company,
+        summary="；".join(summary_parts),
+        score=1.0,
+        sourceRef=f"pfa:2026:{key}" if key else "pfa:2026",
+        metadata={"brand": "、".join(brands[:8])} if brands else {},
+    )
+
+
 class RetrievalService:
     def __init__(
         self,
@@ -183,6 +239,25 @@ class RetrievalService:
             for domain in request.domains
             if domain in {"publicKnowledge", "courseCatalog"}
         }
+        pfa_keyword = (
+            _pfa_keyword(request.query)
+            if "publicKnowledge" in knowledge_domains
+            else None
+        )
+        if pfa_keyword:
+            # Structured exhibition facts are exact and should win the bounded
+            # voice evidence budget ahead of general semantic knowledge hits.
+            tasks.append(
+                (
+                    "pfa",
+                    asyncio.create_task(
+                        self._upstream.search_pfa_exhibitors(
+                            pfa_keyword,
+                            request.limit,
+                        )
+                    ),
+                )
+            )
         if knowledge_domains:
             request_id = request.request_id or f"xiaozhi-{uuid.uuid4().hex}"
             tasks.append(
@@ -216,6 +291,11 @@ class RetrievalService:
             if source == "product":
                 for raw in _items(payload.get("items")):
                     normalized = _product_item(raw)
+                    if normalized is not None:
+                        items.append(normalized)
+            elif source == "pfa":
+                for raw in _items(payload.get("items")):
+                    normalized = _pfa_item(raw)
                     if normalized is not None:
                         items.append(normalized)
             else:

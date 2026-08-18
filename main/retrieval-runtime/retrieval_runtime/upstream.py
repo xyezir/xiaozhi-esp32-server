@@ -77,9 +77,43 @@ class CyjdataClient:
             },
         )
 
+    async def search_pfa_exhibitors(self, keyword: str, limit: int) -> dict:
+        """Search the authoritative structured PFA exhibition projection.
+
+        Booth data is synchronized independently of the knowledge-vector
+        indexes, so it stays queryable while those indexes are being rebuilt.
+        """
+        return await self._get(
+            "/api/v2/exhibitions/pfa/companies",
+            {
+                "year": 2026,
+                "keyword": keyword,
+                "page": 1,
+                "page_size": min(limit, 20),
+            },
+        )
+
+    async def _get(self, path: str, params: dict) -> dict:
+        return await self._request("GET", path, params=params)
+
     async def _post(self, path: str, payload: dict) -> dict:
+        return await self._request("POST", path, payload=payload)
+
+    async def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        payload: dict | None = None,
+        params: dict | None = None,
+    ) -> dict:
         try:
-            response = await self._client.post(path, json=payload)
+            response = await self._client.request(
+                method,
+                path,
+                json=payload,
+                params=params,
+            )
         except httpx.TimeoutException as exc:
             raise UpstreamError("UPSTREAM_TIMEOUT") from exc
         except httpx.HTTPError as exc:

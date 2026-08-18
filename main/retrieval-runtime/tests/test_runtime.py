@@ -7,7 +7,7 @@ from unittest.mock import patch
 import httpx
 from retrieval_runtime.main import create_app
 from retrieval_runtime.models import RetrieveRequest
-from retrieval_runtime.service import RetrievalService, _degraded_reason
+from retrieval_runtime.service import RetrievalService, _degraded_reason, _pfa_keyword
 from retrieval_runtime.settings import Settings, SettingsError
 from retrieval_runtime.upstream import CyjdataClient
 
@@ -34,7 +34,21 @@ class RuntimeContractTest(unittest.IsolatedAsyncioTestCase):
             self.calls.append(request.url.path)
             self.assertNotIn("api-key", request.url.path)
             self.assertEqual("test-api-key-000000000000", request.headers["X-API-Key"])
-            if request.url.path.endswith("/knowledge/search"):
+            if request.url.path.endswith("/exhibitions/pfa/companies"):
+                payload = {
+                    "items": [
+                        {
+                            "canonical_company_key": "company-1",
+                            "display_name": "烟台中宠食品股份有限公司",
+                            "brands": ["顽皮", "领先"],
+                            "halls": ["N1馆", "N5馆"],
+                            "booths": ["N1C51", "N5F51"],
+                            "category_primary": "宠物食品",
+                        }
+                    ],
+                    "total": 1,
+                }
+            elif request.url.path.endswith("/knowledge/search"):
                 payload = {
                     "contractVersion": 1,
                     "items": [],
@@ -101,6 +115,26 @@ class RuntimeContractTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(first.cached)
         self.assertTrue(second.cached)
         self.assertEqual(1, len(self.calls))
+
+    async def test_pfa_query_uses_structured_booth_projection_when_index_is_down(self):
+        result = await self.service.retrieve(
+            RetrieveRequest(
+                query="中宠在2026亚宠展哪个展位？",
+                domains=["publicKnowledge"],
+                limit=4,
+            )
+        )
+
+        self.assertTrue(result.answerable)
+        self.assertTrue(result.degraded)
+        self.assertEqual("烟台中宠食品股份有限公司", result.items[0].title)
+        self.assertIn("N1C51", result.items[0].summary)
+        self.assertEqual("pfa:2026:company-1", result.items[0].source_ref)
+        self.assertIn(
+            "/api/v2/exhibitions/pfa/companies",
+            self.calls,
+        )
+        self.assertEqual("中宠", _pfa_keyword("中宠在2026亚宠展哪个展位？"))
 
     async def test_auth_failure_is_redacted_and_fail_closed(self):
         async def denied(_: httpx.Request) -> httpx.Response:

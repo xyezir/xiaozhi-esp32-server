@@ -7,6 +7,7 @@ import httpx
 from plugins_func.functions.retrieve_from_cyjdata import (
     RetrievalRuntimeClient,
     _format_context,
+    _format_pfa_booth_answer,
     _load_config,
     close_retrieval_runtime_client,
     retrieve_from_cyjdata,
@@ -80,6 +81,65 @@ class RetrievalRuntimePluginTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(Action.REQLLM, response.action)
         self.assertIn("暂时不可用", response.result)
         self.assertNotIn("secret", response.result)
+
+    async def test_pfa_booth_result_skips_second_llm_pass(self):
+        payload = {
+            "contractVersion": 1,
+            "answerable": True,
+            "items": [
+                {
+                    "kind": "knowledge",
+                    "title": "烟台中宠食品股份有限公司",
+                    "summary": "2026 亚宠展；展馆：N1馆、N5馆；展位：N1C51、N5F51",
+                    "sourceRef": "pfa:2026:company-1",
+                },
+                {
+                    "kind": "knowledge",
+                    "title": "浙江中宠科技发展有限公司",
+                    "summary": "2026 亚宠展；展馆：N4馆；展位：N4K61",
+                    "sourceRef": "pfa:2026:company-2",
+                },
+            ],
+        }
+        fake_client = SimpleNamespace(retrieve=AsyncMock(return_value=payload))
+        conn = connection()
+        with patch(
+            "plugins_func.functions.retrieve_from_cyjdata._get_client",
+            new=AsyncMock(return_value=fake_client),
+        ):
+            response = await retrieve_from_cyjdata(conn, "中宠亚宠展展位号")
+
+        self.assertEqual(Action.RESPONSE, response.action)
+        self.assertIsNone(response.result)
+        self.assertIn("N1C51、N5F51", response.response)
+        self.assertIn("N4K61", response.response)
+        self.assertIn("多个匹配结果", response.response)
+
+    def test_pfa_fast_path_rejects_general_or_mixed_results(self):
+        pfa_payload = {
+            "answerable": True,
+            "items": [
+                {
+                    "title": "鲜朗",
+                    "summary": "2026 亚宠展；展位：W9D51",
+                    "sourceRef": "pfa:2026:company-1",
+                }
+            ],
+        }
+        self.assertIsNone(_format_pfa_booth_answer("介绍鲜朗", pfa_payload))
+
+        mixed_payload = {
+            **pfa_payload,
+            "items": [
+                *pfa_payload["items"],
+                {
+                    "title": "网页资料",
+                    "summary": "展位：未知",
+                    "sourceRef": "knowledge:42",
+                },
+            ],
+        }
+        self.assertIsNone(_format_pfa_booth_answer("鲜朗展位", mixed_payload))
 
     async def test_client_is_closed_with_connection(self):
         fake_client = SimpleNamespace(close=AsyncMock())
