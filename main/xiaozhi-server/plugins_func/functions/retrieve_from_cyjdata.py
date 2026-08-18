@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import math
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -249,6 +250,48 @@ def _format_context(question: str, payload: dict[str, Any]) -> str:
     return "\n".join(lines)[:6000]
 
 
+_PFA_BOOTH_QUERY_MARKERS = ("展位", "展台", "摊位")
+_PFA_BOOTH_PATTERN = re.compile(r"(?:展位|展台|摊位)[：:]\s*([^；;，。\n]+(?:、[^；;，。\n]+)*)")
+
+
+def _format_pfa_booth_answer(question: str, payload: dict[str, Any]) -> str | None:
+    """Return an exact short answer for authoritative PFA booth records.
+
+    These records come from the structured exhibitor projection rather than
+    free-form documents.  Skipping a second LLM pass lowers voice latency and
+    also prevents the model from merging companies that share a brand name.
+    """
+    if not any(marker in question for marker in _PFA_BOOTH_QUERY_MARKERS):
+        return None
+    if payload.get("answerable") is not True:
+        return None
+    raw_items = payload.get("items", [])
+    if not isinstance(raw_items, list) or not raw_items:
+        return None
+
+    answers: list[str] = []
+    for item in raw_items[:10]:
+        if not isinstance(item, dict):
+            return None
+        source_ref = _clean_text(item.get("sourceRef"), 240)
+        if not source_ref.startswith("pfa:"):
+            return None
+        title = _clean_text(item.get("title"), 120)
+        summary = _clean_text(item.get("summary"), 800)
+        booth_match = _PFA_BOOTH_PATTERN.search(summary)
+        if not title or booth_match is None:
+            return None
+        booths = _clean_text(booth_match.group(1), 160)
+        if not booths:
+            return None
+        answers.append(f"{title}的展位是{booths}")
+
+    if not answers:
+        return None
+    prefix = "查到多个匹配结果：" if len(answers) > 1 else "查到了："
+    return (prefix + "；".join(answers) + "。")[:1200]
+
+
 @register_function(
     "retrieve_from_cyjdata",
     RETRIEVE_FROM_CYJDATA_FUNCTION_DESC,
@@ -269,6 +312,9 @@ async def retrieve_from_cyjdata(
             config.domains,
             config.max_results,
         )
+        pfa_booth_answer = _format_pfa_booth_answer(normalized_question, payload)
+        if pfa_booth_answer:
+            return ActionResponse(Action.RESPONSE, None, pfa_booth_answer)
         return ActionResponse(
             Action.REQLLM,
             _format_context(normalized_question, payload),
